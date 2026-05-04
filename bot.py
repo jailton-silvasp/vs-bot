@@ -55,7 +55,7 @@ async def rotina_svs():
     while not client.is_closed():
         agora = datetime.now(tz)
 
-        if agora.hour == 0 and agora.minute == 0:
+        if agora.minute % 2 == 0:
             hoje = agora.strftime("%d/%m/%Y")
 
             if ultimo_envio != hoje:
