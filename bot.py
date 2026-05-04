@@ -56,7 +56,7 @@ async def rotina_svs():
         agora = datetime.now(tz)
 
         # 🔥 DISPARO 00:00
-        if agora.minute % 2 == 0:
+        if agora.hour == 0 and agora.minute == 0:
             hoje = agora.strftime("%d/%m/%Y")
 
             if ultimo_envio != hoje:
