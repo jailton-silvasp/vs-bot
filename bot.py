@@ -10,14 +10,8 @@ import pytz
 # ===== DISCORD =====
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-CANAL_VS = os.getenv("CANAL_VS")
-CANAL_AVISOS = os.getenv("CANAL_AVISOS")
-
-if CANAL_VS:
-    CANAL_VS = int(CANAL_VS)
-
-if CANAL_AVISOS:
-    CANAL_AVISOS = int(CANAL_AVISOS)
+CANAL_VS = int(os.getenv("CANAL_VS"))
+CANAL_AVISOS = int(os.getenv("CANAL_AVISOS"))
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -43,13 +37,15 @@ ultimo_envio = None
 ultimo_ranking = None
 ultimo_alerta = None
 
+
 # =========================================
-# 🔥 RANKING
+# 🏆 RANKING
 # =========================================
 async def enviar_ranking():
     canal = client.get_channel(CANAL_AVISOS)
 
     if not canal:
+        print("❌ Canal não encontrado")
         return
 
     dados = sheet.get_all_records()
@@ -60,15 +56,22 @@ async def enviar_ranking():
     for linha in dados:
         if linha['Data'] == hoje:
             user = linha['Usuário']
-            vs = float(linha['VS'])
+            try:
+                vs = float(str(linha['VS']).replace(",", "."))
+            except:
+                continue
+
             ranking[user] = ranking.get(user, 0) + vs
 
     ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
 
     mensagem = "🏆 **RANKING VS DO DIA**\n\n"
 
-    for i, (user, vs) in enumerate(ranking_ordenado[:10], start=1):
-        mensagem += f"{i}. {user} — {vs}M\n"
+    if ranking_ordenado:
+        for i, (user, vs) in enumerate(ranking_ordenado[:10], start=1):
+            mensagem += f"{i}. {user} — {round(vs,2)}M\n"
+    else:
+        mensagem += "Sem registros hoje."
 
     await canal.send(mensagem)
 
@@ -90,7 +93,11 @@ async def verificar_meta():
     for linha in dados:
         if linha['Data'] == hoje:
             user = linha['Usuário']
-            vs = float(linha['VS'])
+            try:
+                vs = float(str(linha['VS']).replace(",", "."))
+            except:
+                continue
+
             ranking[user] = ranking.get(user, 0) + vs
 
     nao_bateram = [u for u, v in ranking.items() if v < 2]
@@ -102,6 +109,8 @@ async def verificar_meta():
             mensagem += f"- {user}\n"
 
         await canal.send(mensagem)
+    else:
+        print("✅ Todos bateram meta ou sem dados")
 
 
 # =========================================
@@ -142,18 +151,22 @@ async def rotina_svs():
                     ultimo_envio = hoje
 
             # 🏆 23:55 Ranking
-            if agora.minute % 2 == 0:
+            if agora.hour == 23 and agora.minute == 55:
                 if ultimo_ranking != hoje:
                     await enviar_ranking()
                     print("🏆 Ranking enviado")
                     ultimo_ranking = hoje
 
             # ⚠️ 23:57 Meta
-            if agora.minute % 2 == 1:
+            if agora.hour == 23 and agora.minute == 57:
                 if ultimo_alerta != hoje:
                     await verificar_meta()
                     print("⚠️ Alerta enviado")
                     ultimo_alerta = hoje
+
+        # ⏱️ ESSENCIAL
+        await asyncio.sleep(60)
+
 
 # =========================================
 # 🎮 VS COMANDO
@@ -163,22 +176,22 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if CANAL_VS and message.channel.id != CANAL_VS:
-        return
+    if message.channel.id == CANAL_VS:
 
-    if message.content.startswith("!vs"):
-        try:
-            valor = float(message.content.split(" ")[1])
-            usuario = str(message.author)
-            data = datetime.now(tz).strftime("%d/%m/%Y")
+        if message.content.startswith("!vs"):
+            try:
+                valor = float(message.content.split(" ")[1])
+                usuario = str(message.author)
+                data = datetime.now(tz).strftime("%d/%m/%Y")
 
-            sheet.append_row([data, usuario, valor])
+                sheet.append_row([data, usuario, valor])
 
-            await message.channel.send(f"✅ VS registrado: {valor}M")
+                await message.channel.send(f"✅ VS registrado: {valor}M")
 
-        except:
-            await message.channel.send("❌ Use: !vs 2.5")
-            
+            except:
+                await message.channel.send("❌ Use: !vs 2.5")
+
+    # comandos manuais (qualquer canal)
     if message.content == "!ranking":
         await enviar_ranking()
 
@@ -191,7 +204,7 @@ async def on_message(message):
 # =========================================
 @client.event
 async def on_ready():
-    print(f'Logado como {client.user}')
+    print(f'🔥 Logado como {client.user}')
     client.loop.create_task(rotina_svs())
 
 client.run(TOKEN)
