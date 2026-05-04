@@ -142,21 +142,18 @@ async def rotina_svs():
                     ultimo_envio = hoje
 
             # 🏆 23:55 Ranking
-            if agora.hour == 23 and agora.minute == 55:
+            if agora.minute % 2 == 0:
                 if ultimo_ranking != hoje:
                     await enviar_ranking()
                     print("🏆 Ranking enviado")
                     ultimo_ranking = hoje
 
             # ⚠️ 23:57 Meta
-            if agora.hour == 23 and agora.minute == 57:
+            if agora.minute % 2 == 1:
                 if ultimo_alerta != hoje:
                     await verificar_meta()
                     print("⚠️ Alerta enviado")
                     ultimo_alerta = hoje
-
-        await asyncio.sleep(60)
-
 
 # =========================================
 # 🎮 VS COMANDO
