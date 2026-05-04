@@ -43,12 +43,20 @@ async def on_ready():
     print(f'Logado como {client.user}')
 
 @client.event
+async def on_ready():
+    print(f'Logado como {client.user}')
+
+@client.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    # ===== REGISTRO VS =====
+    # 🔒 BLOQUEIA USO FORA DO CANAL VS
     if message.content.startswith("!vs"):
+
+        if message.channel.id != int(os.getenv("CANAL_VS")):
+            return
+
         try:
             valor = float(message.content.split(" ")[1])
             usuario = str(message.author)
@@ -57,6 +65,7 @@ async def on_message(message):
             sheet.append_row([data, usuario, valor])
 
             await message.channel.send(f"✅ VS registrado: {valor}M")
+
         except:
             await message.channel.send("❌ Use: !vs 2.5")
 
