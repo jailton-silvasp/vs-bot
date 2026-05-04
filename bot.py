@@ -72,7 +72,6 @@ async def rotina_svs():
 ⚙️ Use aceleradores de construção e pesquisa  
 💰 Coleta o dia inteiro  
 
-🚨 Use: !vs 2.5
 """,
 
                         1: f"""📅 **Dia 2 – Iniciativa de Heróis ({hoje})**
