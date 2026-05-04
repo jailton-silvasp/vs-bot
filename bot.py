@@ -181,6 +181,12 @@ async def on_message(message):
 
         except:
             await message.channel.send("❌ Use: !vs 2.5")
+            
+        if message.content == "!ranking":
+    await enviar_ranking()
+
+if message.content == "!meta":
+    await verificar_meta()
 
 
 # =========================================
