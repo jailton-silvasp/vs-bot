@@ -35,102 +35,132 @@ client_gspread = gspread.authorize(creds)
 
 sheet = client_gspread.open("Controle VS").sheet1
 
-# ===== TIMEZONE BRASIL =====
+# ===== TIMEZONE =====
 tz = pytz.timezone("America/Sao_Paulo")
 
-# ===== CONTROLE PRA NÃO DUPLICAR =====
+# ===== CONTROLE =====
 ultimo_envio = None
+ultimo_ranking = None
+ultimo_alerta = None
 
-@client.event
-async def on_ready():
-    print(f'Logado como {client.user}')
-    client.loop.create_task(rotina_svs())
+# =========================================
+# 🔥 RANKING
+# =========================================
+async def enviar_ranking():
+    canal = client.get_channel(CANAL_AVISOS)
 
-# ===== ROTINA AUTOMÁTICA =====
+    if not canal:
+        return
+
+    dados = sheet.get_all_records()
+    hoje = datetime.now(tz).strftime("%d/%m/%Y")
+
+    ranking = {}
+
+    for linha in dados:
+        if linha['Data'] == hoje:
+            user = linha['Usuário']
+            vs = float(linha['VS'])
+            ranking[user] = ranking.get(user, 0) + vs
+
+    ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
+
+    mensagem = "🏆 **RANKING VS DO DIA**\n\n"
+
+    for i, (user, vs) in enumerate(ranking_ordenado[:10], start=1):
+        mensagem += f"{i}. {user} — {vs}M\n"
+
+    await canal.send(mensagem)
+
+
+# =========================================
+# ⚠️ ALERTA META
+# =========================================
+async def verificar_meta():
+    canal = client.get_channel(CANAL_AVISOS)
+
+    if not canal:
+        return
+
+    dados = sheet.get_all_records()
+    hoje = datetime.now(tz).strftime("%d/%m/%Y")
+
+    ranking = {}
+
+    for linha in dados:
+        if linha['Data'] == hoje:
+            user = linha['Usuário']
+            vs = float(linha['VS'])
+            ranking[user] = ranking.get(user, 0) + vs
+
+    nao_bateram = [u for u, v in ranking.items() if v < 2]
+
+    if nao_bateram:
+        mensagem = "⚠️ **NÃO BATERAM 2M HOJE:**\n\n"
+
+        for user in nao_bateram:
+            mensagem += f"- {user}\n"
+
+        await canal.send(mensagem)
+
+
+# =========================================
+# 🚀 ROTINA PRINCIPAL
+# =========================================
 async def rotina_svs():
-    global ultimo_envio
+    global ultimo_envio, ultimo_ranking, ultimo_alerta
 
     await client.wait_until_ready()
 
     while not client.is_closed():
         agora = datetime.now(tz)
+        hoje = agora.strftime("%d/%m/%Y")
 
-        if agora.hour == 0 and agora.minute == 0:
-            hoje = agora.strftime("%d/%m/%Y")
+        canal = client.get_channel(CANAL_AVISOS)
 
-            if ultimo_envio != hoje:
-                canal = client.get_channel(CANAL_AVISOS)
+        if canal:
 
-                if canal:
+            # 🔥 00:00 SVS
+            if agora.hour == 0 and agora.minute == 0:
+                if ultimo_envio != hoje:
+
                     dia = agora.weekday()
 
                     mensagens = {
-
-                        0: f"""📅 **Dia 1 – Expansão do Abrigo ({hoje})**
-
-🏗 Construção | 📜 Medalhas | 🔬 Pesquisa  
-⚙️ Use aceleradores de construção e pesquisa  
-💰 Coleta o dia inteiro  
-
-""",
-
-                        1: f"""📅 **Dia 2 – Iniciativa de Heróis ({hoje})**
-
-📡 Radar | 🎖 Recrutamento Prime  
-🧩 Fragmentos | 🎯 Equipamentos  
-
-💡 Dica: iniciar treino antes do reset
-""",
-
-                        2: f"""📅 **Dia 3 – Progresso ({hoje})**
-
-🚚 Caminhões S | 🕶 Missões laranja  
-🪖 Treinamento de tropas  
-⚙️ Aceleradores apenas treino
-""",
-
-                        3: f"""📅 **Dia 4 – Especialista em Armas ({hoje})**
-
-📡 Radar | 💥 Rally Boomer  
-🧟 Zumbis | 🧰 Chips  
-⚙️ Todos aceleradores liberados
-""",
-
-                        4: f"""📅 **Dia 5 – Crescimento ({hoje})**
-
-🧩 Fragmentos | 🔋 Núcleos  
-📜 Medalhas | 🎯 Equipamentos  
-
-💡 Use tudo que sobrou
-""",
-
-                        5: f"""📅 **Dia 6 – PvP / Guerra ({hoje})**
-
-🚚 Caminhões S  
-🎯 Combate | 💀 Perdas contam  
-
-🛡 Use escudo se necessário
-""",
-
-                        6: f"""🔥 **SVS ENCERRADO ({hoje})**
-
-💪 Cure tropas  
-📊 Reorganize seu poder  
-⚔️ Prepare-se para próxima semana
-"""
+                        0: f"📅 Dia 1 – Expansão ({hoje})\n🏗 Construção | 🔬 Pesquisa | 💰 Coleta",
+                        1: f"📅 Dia 2 – Heróis ({hoje})\n📡 Radar | 🎖 Recrutamento | 🧩 Fragmentos",
+                        2: f"📅 Dia 3 – Tropas ({hoje})\n🪖 Treino | 🚚 Missões S",
+                        3: f"📅 Dia 4 – Armas ({hoje})\n💥 Rally | 🧟 Zumbis",
+                        4: f"📅 Dia 5 – Crescimento ({hoje})\n🧩 Fragmentos | 🔋 Núcleos",
+                        5: f"📅 Dia 6 – Guerra ({hoje})\n⚔️ PvP | 💀 Perdas",
+                        6: f"🔥 SVS ENCERRADO ({hoje})\n💪 Recuperação"
                     }
 
-                    mensagem = mensagens.get(dia)
+                    await canal.send(mensagens.get(dia))
+                    print("✅ SVS enviado")
 
-                    if mensagem:
-                        await canal.send(mensagem)
-                        print(f"✅ SVS Dia {dia+1} enviado")
+                    ultimo_envio = hoje
 
-                ultimo_envio = hoje
+            # 🏆 23:55 Ranking
+            if agora.hour == 23 and agora.minute == 55:
+                if ultimo_ranking != hoje:
+                    await enviar_ranking()
+                    print("🏆 Ranking enviado")
+                    ultimo_ranking = hoje
+
+            # ⚠️ 23:57 Meta
+            if agora.hour == 23 and agora.minute == 57:
+                if ultimo_alerta != hoje:
+                    await verificar_meta()
+                    print("⚠️ Alerta enviado")
+                    ultimo_alerta = hoje
 
         await asyncio.sleep(60)
 
-# ===== VS =====
+
+# =========================================
+# 🎮 VS COMANDO
+# =========================================
 @client.event
 async def on_message(message):
     if message.author.bot:
@@ -148,7 +178,17 @@ async def on_message(message):
             sheet.append_row([data, usuario, valor])
 
             await message.channel.send(f"✅ VS registrado: {valor}M")
+
         except:
             await message.channel.send("❌ Use: !vs 2.5")
+
+
+# =========================================
+# 🚀 START
+# =========================================
+@client.event
+async def on_ready():
+    print(f'Logado como {client.user}')
+    client.loop.create_task(rotina_svs())
 
 client.run(TOKEN)
