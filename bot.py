@@ -4,9 +4,20 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import os
 import json
-from collections import defaultdict
+import asyncio
+import pytz
 
+# ===== DISCORD =====
 TOKEN = os.getenv("DISCORD_TOKEN")
+
+CANAL_VS = os.getenv("CANAL_VS")
+CANAL_AVISOS = os.getenv("CANAL_AVISOS")
+
+if CANAL_VS:
+    CANAL_VS = int(CANAL_VS)
+
+if CANAL_AVISOS:
+    CANAL_AVISOS = int(CANAL_AVISOS)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -24,77 +35,78 @@ client_gspread = gspread.authorize(creds)
 
 sheet = client_gspread.open("Controle VS").sheet1
 
-META_DIARIA = 2.0
+# ===== TIMEZONE BRASIL =====
+tz = pytz.timezone("America/Sao_Paulo")
 
-def carregar_dados():
-    registros = sheet.get_all_records()
-    hoje = datetime.now().strftime("%d/%m/%Y")
-
-    dados = defaultdict(float)
-
-    for r in registros:
-        if r["Data"] == hoje:
-            dados[r["Usuario"]] += float(r["VS"])
-
-    return dados
+# ===== CONTROLE PRA NÃO DUPLICAR =====
+ultimo_envio = None
 
 @client.event
 async def on_ready():
     print(f'Logado como {client.user}')
+    client.loop.create_task(rotina_svs())
 
-@client.event
-async def on_ready():
-    print(f'Logado como {client.user}')
+# ===== ROTINA AUTOMÁTICA =====
+async def rotina_svs():
+    global ultimo_envio
 
+    await client.wait_until_ready()
+
+    while not client.is_closed():
+        agora = datetime.now(tz)
+
+        # 🔥 DISPARO 00:00
+        if agora.hour == 0 and agora.minute == 0:
+            hoje = agora.strftime("%d/%m/%Y")
+
+            if ultimo_envio != hoje:
+                canal = client.get_channel(CANAL_AVISOS)
+
+                if canal:
+                    await canal.send(f"""
+🔥 **SVS INICIADO - {hoje}**
+
+📊 Meta diária:
+➡️ 2M VS por membro
+
+⚔️ Foquem em:
+- Coleta
+- Construção
+- Pesquisa
+- Abate estratégico
+
+🚨 Não esqueçam de registrar:
+Use: `!vs 2.5`
+
+Boa guerra a todos.
+ΞLØ - S U P R Ξ M Ø
+""")
+
+                    print("✅ Aviso SVS enviado")
+
+                ultimo_envio = hoje
+
+        await asyncio.sleep(60)  # checa a cada 1 min
+
+# ===== VS =====
 @client.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    # 🔒 BLOQUEIA USO FORA DO CANAL VS
+    if CANAL_VS and message.channel.id != CANAL_VS:
+        return
+
     if message.content.startswith("!vs"):
-
-        if message.channel.id != int(os.getenv("CANAL_VS")):
-            return
-
         try:
             valor = float(message.content.split(" ")[1])
             usuario = str(message.author)
-            data = datetime.now().strftime("%d/%m/%Y")
+            data = datetime.now(tz).strftime("%d/%m/%Y")
 
             sheet.append_row([data, usuario, valor])
 
             await message.channel.send(f"✅ VS registrado: {valor}M")
-
         except:
             await message.channel.send("❌ Use: !vs 2.5")
-
-    # ===== RANKING =====
-    if message.content.startswith("!ranking"):
-        dados = carregar_dados()
-
-        if not dados:
-            await message.channel.send("⚠️ Nenhum VS registrado hoje")
-            return
-
-        ranking = sorted(dados.items(), key=lambda x: x[1], reverse=True)
-
-        msg = "🏆 **Ranking do Dia**\n\n"
-        for i, (user, vs) in enumerate(ranking, 1):
-            msg += f"{i}. {user} — {vs}M\n"
-
-        await message.channel.send(msg)
-
-    # ===== META =====
-    if message.content.startswith("!meta"):
-        dados = carregar_dados()
-
-        msg = "🎯 **Meta diária (2M)**\n\n"
-
-        for user, vs in dados.items():
-            status = "✅" if vs >= META_DIARIA else "❌"
-            msg += f"{user} — {vs}M {status}\n"
-
-        await message.channel.send(msg)
 
 client.run(TOKEN)
