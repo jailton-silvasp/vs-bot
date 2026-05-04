@@ -55,7 +55,6 @@ async def rotina_svs():
     while not client.is_closed():
         agora = datetime.now(tz)
 
-        # 🔥 DISPARO 00:00
         if agora.hour == 0 and agora.minute == 0:
             hoje = agora.strftime("%d/%m/%Y")
 
@@ -63,30 +62,74 @@ async def rotina_svs():
                 canal = client.get_channel(CANAL_AVISOS)
 
                 if canal:
-                    await canal.send(f"""
-🔥 **SVS INICIADO - {hoje}**
+                    dia = agora.weekday()
 
-📊 Meta diária:
-➡️ 2M VS por membro
+                    mensagens = {
 
-⚔️ Foquem em:
-- Coleta
-- Construção
-- Pesquisa
-- Abate estratégico
+                        0: f"""📅 **Dia 1 – Expansão do Abrigo ({hoje})**
 
-🚨 Não esqueçam de registrar:
-Use: `!vs 2.5`
+🏗 Construção | 📜 Medalhas | 🔬 Pesquisa  
+⚙️ Use aceleradores de construção e pesquisa  
+💰 Coleta o dia inteiro  
 
-Boa guerra a todos.
-ΞLØ - S U P R Ξ M Ø
-""")
+🚨 Use: !vs 2.5
+""",
 
-                    print("✅ Aviso SVS enviado")
+                        1: f"""📅 **Dia 2 – Iniciativa de Heróis ({hoje})**
+
+📡 Radar | 🎖 Recrutamento Prime  
+🧩 Fragmentos | 🎯 Equipamentos  
+
+💡 Dica: iniciar treino antes do reset
+""",
+
+                        2: f"""📅 **Dia 3 – Progresso ({hoje})**
+
+🚚 Caminhões S | 🕶 Missões laranja  
+🪖 Treinamento de tropas  
+⚙️ Aceleradores apenas treino
+""",
+
+                        3: f"""📅 **Dia 4 – Especialista em Armas ({hoje})**
+
+📡 Radar | 💥 Rally Boomer  
+🧟 Zumbis | 🧰 Chips  
+⚙️ Todos aceleradores liberados
+""",
+
+                        4: f"""📅 **Dia 5 – Crescimento ({hoje})**
+
+🧩 Fragmentos | 🔋 Núcleos  
+📜 Medalhas | 🎯 Equipamentos  
+
+💡 Use tudo que sobrou
+""",
+
+                        5: f"""📅 **Dia 6 – PvP / Guerra ({hoje})**
+
+🚚 Caminhões S  
+🎯 Combate | 💀 Perdas contam  
+
+🛡 Use escudo se necessário
+""",
+
+                        6: f"""🔥 **SVS ENCERRADO ({hoje})**
+
+💪 Cure tropas  
+📊 Reorganize seu poder  
+⚔️ Prepare-se para próxima semana
+"""
+                    }
+
+                    mensagem = mensagens.get(dia)
+
+                    if mensagem:
+                        await canal.send(mensagem)
+                        print(f"✅ SVS Dia {dia+1} enviado")
 
                 ultimo_envio = hoje
 
-        await asyncio.sleep(60)  # checa a cada 1 min
+        await asyncio.sleep(60)
 
 # ===== VS =====
 @client.event
