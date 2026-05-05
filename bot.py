@@ -37,10 +37,15 @@ async def enviar_ranking():
 
     try:
         res = requests.get(f"{API_URL}/ranking", timeout=10)
-        data = res.json()
-    except Exception as e:
-        print("❌ Erro ao buscar ranking:", e)
-        return
+
+print("STATUS:", res.status_code)
+print("RESPOSTA:", res.text)
+
+try:
+    data = res.json()
+except Exception:
+    print("❌ API não retornou JSON válido")
+    return
 
     embed = discord.Embed(
         title="🏆 Ranking SVS do Dia",
