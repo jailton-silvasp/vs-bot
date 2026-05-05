@@ -49,9 +49,12 @@ async def enviar_ranking():
 
     if data:
         for i, item in enumerate(data[:10], start=1):
+            nome = item.get("usuario", "Desconhecido")
+            total = float(item.get("total", 0))
+
             embed.add_field(
-                name=f"{i}º {item['usuario']}",
-                value=f"{round(float(item['total']), 2)}M",
+                name=f"{i}º {nome}",
+                value=f"{round(total, 2)}M",
                 inline=False
             )
     else:
@@ -76,7 +79,11 @@ async def verificar_meta():
         print("❌ Erro ao verificar meta:", e)
         return
 
-    nao_bateram = [u["usuario"] for u in data if float(u["total"]) < 2]
+    nao_bateram = [
+        u.get("usuario", "Desconhecido")
+        for u in data
+        if float(u.get("total", 0)) < 2
+    ]
 
     if nao_bateram:
         mensagem = "⚠️ **NÃO BATERAM 2M HOJE:**\n\n"
@@ -87,7 +94,7 @@ async def verificar_meta():
 
 
 # =========================================
-# 🚀 ROTINA AUTOMÁTICA (CRON)
+# 🚀 ROTINA AUTOMÁTICA
 # =========================================
 async def rotina_svs():
     global ultimo_envio, ultimo_ranking, ultimo_alerta
@@ -110,12 +117,12 @@ async def rotina_svs():
 
                     mensagens = {
                         0: f"📅 Dia 1 – Expansão ({hoje})\n🏗 Construção | 🔬 Pesquisa | 💰 Coleta",
-                        1: f"📅 Dia 2 – Heróis ({hoje})\n📡 Radar | 🎖 Recrutamento | 🧩 Fragmentos",
-                        2: f"📅 Dia 3 – Tropas ({hoje})\n🪖 Treino | 🚚 Missões S",
+                        1: f"📅 Dia 2 – Heróis ({hoje})\n📡 Radar | 🎖 Recrutamento",
+                        2: f"📅 Dia 3 – Tropas ({hoje})\n🪖 Treino | 🚚 Missões",
                         3: f"📅 Dia 4 – Armas ({hoje})\n💥 Rally | 🧟 Zumbis",
-                        4: f"📅 Dia 5 – Crescimento ({hoje})\n🧩 Fragmentos | 🔋 Núcleos",
-                        5: f"📅 Dia 6 – Guerra ({hoje})\n⚔️ PvP | 💀 Perdas",
-                        6: f"🔥 SVS ENCERRADO ({hoje})\n💪 Recuperação"
+                        4: f"📅 Dia 5 – Crescimento ({hoje})\n🧩 Fragmentos",
+                        5: f"📅 Dia 6 – Guerra ({hoje})\n⚔️ PvP",
+                        6: f"🔥 SVS ENCERRADO ({hoje})"
                     }
 
                     await canal.send(mensagens.get(dia))
@@ -157,34 +164,44 @@ async def on_message(message):
                     await message.channel.send("❌ Valor inválido")
                     return
 
-                # 🔥 NOME DE EXIBIÇÃO (CORRIGIDO)
-                usuario = getattr(message.author, "display_name", message.author.name)
+                # 🔥 NOME CORRIGIDO (ANTI-UNDEFINED)
+                if message.guild:
+                    usuario = message.author.display_name
+                else:
+                    usuario = message.author.name
 
-                # 🔥 ENVIO PARA API (CORRIGIDO)
+                if not usuario or usuario == "undefined":
+                    usuario = message.author.name
+
+                print(f"👤 Usuario capturado: {usuario}")
+
+                # 🔥 ENVIO API CORRETO
                 try:
                     response = requests.post(
                         f"{API_URL}/vs",
                         json={
-                            "user": usuario,  # ⚠️ PADRÃO CORRETO
+                            "user": usuario,
                             "vs": valor
                         },
-                        timeout=5
+                        timeout=10
                     )
 
-                    print("📤 Enviado:", usuario, valor)
-                    print("📡 Status:", response.status_code)
-                    print("📨 Resposta:", response.text)
+                    print("📡 STATUS:", response.status_code)
+                    print("📨 RESPOSTA:", response.text)
 
-                    await message.channel.send(f"✅ VS registrado: {valor}M")
+                    if response.status_code == 200:
+                        await message.channel.send(f"✅ VS registrado: {valor}M")
+                    else:
+                        await message.channel.send("❌ API retornou erro")
 
                 except Exception as e:
-                    print("❌ Erro ao enviar:", e)
-                    await message.channel.send("❌ Erro ao registrar VS")
+                    print("❌ ERRO REQUEST:", e)
+                    await message.channel.send("❌ Erro ao conectar na API")
 
             except:
                 await message.channel.send("❌ Use: !vs 2.5")
 
-    # 📊 COMANDOS MANUAIS
+    # 📊 COMANDOS
     if message.content == "!ranking":
         await enviar_ranking()
 
