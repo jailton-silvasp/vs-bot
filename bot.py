@@ -11,7 +11,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 CANAL_VS = int(os.getenv("CANAL_VS"))
 CANAL_AVISOS = int(os.getenv("CANAL_AVISOS"))
 
-API_URL = os.getenv("API_URL")  # 🔥 SUA API DO RAILWAY
+API_URL = os.getenv("API_URL")  # EX: https://api-svs-production.up.railway.app
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -36,10 +36,10 @@ async def enviar_ranking():
         return
 
     try:
-        res = requests.get(f"{API_URL}/ranking")
+        res = requests.get(f"{API_URL}/ranking", timeout=5)
         data = res.json()
     except Exception as e:
-        print("Erro API:", e)
+        print("❌ Erro ao buscar ranking:", e)
         return
 
     embed = discord.Embed(
@@ -51,7 +51,7 @@ async def enviar_ranking():
         for i, item in enumerate(data[:10], start=1):
             embed.add_field(
                 name=f"{i}º {item['usuario']}",
-                value=f"{round(float(item['total']),2)}M",
+                value=f"{round(float(item['total']), 2)}M",
                 inline=False
             )
     else:
@@ -70,9 +70,10 @@ async def verificar_meta():
         return
 
     try:
-        res = requests.get(f"{API_URL}/ranking")
+        res = requests.get(f"{API_URL}/ranking", timeout=5)
         data = res.json()
-    except:
+    except Exception as e:
+        print("❌ Erro ao verificar meta:", e)
         return
 
     nao_bateram = [u["usuario"] for u in data if float(u["total"]) < 2]
@@ -86,7 +87,7 @@ async def verificar_meta():
 
 
 # =========================================
-# 🚀 ROTINA AUTOMÁTICA
+# 🚀 ROTINA AUTOMÁTICA (CRON)
 # =========================================
 async def rotina_svs():
     global ultimo_envio, ultimo_ranking, ultimo_alerta
@@ -120,15 +121,17 @@ async def rotina_svs():
                     await canal.send(mensagens.get(dia))
                     ultimo_envio = hoje
 
-            # 🏆 23:55
+            # 🏆 23:55 → ranking
             if agora.hour == 23 and agora.minute == 55:
                 if ultimo_ranking != hoje:
+                    print("⏰ Enviando ranking...")
                     await enviar_ranking()
                     ultimo_ranking = hoje
 
-            # ⚠️ 23:57
+            # ⚠️ 23:57 → alerta
             if agora.hour == 23 and agora.minute == 57:
                 if ultimo_alerta != hoje:
+                    print("⏰ Verificando meta...")
                     await verificar_meta()
                     ultimo_alerta = hoje
 
@@ -143,30 +146,45 @@ async def on_message(message):
     if message.author.bot:
         return
 
+    # 📌 REGISTRO VS
     if message.channel.id == CANAL_VS:
 
         if message.content.startswith("!vs"):
             try:
                 valor = float(message.content.split(" ")[1])
 
-                # 🔥 NOME DE EXIBIÇÃO
-                if hasattr(message.author, "display_name"):
-                    usuario = message.author.display_name
-                else:
-                    usuario = message.author.name
+                if valor <= 0:
+                    await message.channel.send("❌ Valor inválido")
+                    return
 
-                # 🔥 ENVIA PRA API
-                requests.post(f"{API_URL}/vs", json={
-                    "usuario": usuario,
-                    "vs": valor
-                })
+                # 🔥 NOME DE EXIBIÇÃO (CORRIGIDO)
+                usuario = getattr(message.author, "display_name", message.author.name)
 
-                await message.channel.send(f"✅ VS registrado: {valor}M")
+                # 🔥 ENVIO PARA API (CORRIGIDO)
+                try:
+                    response = requests.post(
+                        f"{API_URL}/vs",
+                        json={
+                            "user": usuario,  # ⚠️ PADRÃO CORRETO
+                            "vs": valor
+                        },
+                        timeout=5
+                    )
+
+                    print("📤 Enviado:", usuario, valor)
+                    print("📡 Status:", response.status_code)
+                    print("📨 Resposta:", response.text)
+
+                    await message.channel.send(f"✅ VS registrado: {valor}M")
+
+                except Exception as e:
+                    print("❌ Erro ao enviar:", e)
+                    await message.channel.send("❌ Erro ao registrar VS")
 
             except:
                 await message.channel.send("❌ Use: !vs 2.5")
 
-    # comandos globais
+    # 📊 COMANDOS MANUAIS
     if message.content == "!ranking":
         await enviar_ranking()
 
