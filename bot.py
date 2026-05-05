@@ -164,7 +164,6 @@ async def rotina_svs():
                     print("⚠️ Alerta enviado")
                     ultimo_alerta = hoje
 
-        # ⏱️ ESSENCIAL
         await asyncio.sleep(60)
 
 
@@ -181,7 +180,10 @@ async def on_message(message):
         if message.content.startswith("!vs"):
             try:
                 valor = float(message.content.split(" ")[1])
-                usuario = str(message.author)
+
+                # 🔥 AQUI ESTÁ A MUDANÇA PRINCIPAL
+                usuario = message.author.display_name or message.author.name
+
                 data = datetime.now(tz).strftime("%d/%m/%Y")
 
                 sheet.append_row([data, usuario, valor])
@@ -191,7 +193,7 @@ async def on_message(message):
             except:
                 await message.channel.send("❌ Use: !vs 2.5")
 
-    # comandos manuais (qualquer canal)
+    # comandos manuais
     if message.content == "!ranking":
         await enviar_ranking()
 
