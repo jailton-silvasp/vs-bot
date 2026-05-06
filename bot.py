@@ -11,63 +11,77 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 🔥 FORMATADOR (PADRÃO G/M/K)
-def formatar_valor(valor):
-    if valor >= 1_000_000_000:
-        return f"{valor / 1_000_000_000:.2f}G"
-    elif valor >= 1_000_000:
-        return f"{valor / 1_000_000:.2f}M"
-    elif valor >= 1_000:
-        return f"{valor / 1_000:.2f}K"
-    else:
-        return f"{valor:.2f}"
 
-# 🔥 PARSER (entrada do usuário)
-def parse_valor(valor):
-    valor = valor.upper().replace(",", ".")
-    multiplicador = 1
-
-    if valor.endswith("K"):
-        multiplicador = 1_000
-        valor = valor[:-1]
-    elif valor.endswith("M"):
-        multiplicador = 1_000_000
-        valor = valor[:-1]
-    elif valor.endswith("B") or valor.endswith("G"):
-        multiplicador = 1_000_000_000
-        valor = valor[:-1]
-
-    return float(valor) * multiplicador
-
-# 🔥 VS
+# =======================
+# VS (NÃO ALTERADO)
+# =======================
 @bot.command()
-async def vs(ctx, valor: str):
+async def vs(ctx, valor: float):
     try:
-        valor_final = parse_valor(valor)
-
         payload = {
             "usuario": ctx.author.display_name,
             "discord_id": str(ctx.author.id),
-            "valor": valor_final
+            "valor": valor
         }
 
         response = requests.post(f"{API_URL}/vs", json=payload)
 
         if response.status_code == 200:
-            await ctx.send(
-                f"🔥 VS registrado para {ctx.author.display_name}: {formatar_valor(valor_final)}"
-            )
+            await ctx.send(f"🔥 VS registrado para {ctx.author.display_name}: {valor}")
         else:
             await ctx.send("❌ Erro ao salvar VS")
 
-    except:
-        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 2.8G")
+    except Exception as e:
+        await ctx.send("❌ Erro ao registrar VS")
+        print(e)
 
-# 🔥 F1
+
+# =======================
+# RANKING VS
+# =======================
+@bot.command()
+async def ranking(ctx):
+    try:
+        response = requests.get(f"{API_URL}/ranking")
+        data = response.json()
+
+        if not data:
+            await ctx.send("Sem dados.")
+            return
+
+        msg = "🏆 Ranking VS:\n"
+
+        for i, player in enumerate(data, start=1):
+            msg += f"{i}. {player['usuario']} - {float(player['total']):,.2f}\n"
+
+        await ctx.send(msg)
+
+    except Exception as e:
+        await ctx.send("Erro ao buscar ranking")
+        print(e)
+
+
+# =======================
+# F1 (AJUSTADO)
+# =======================
 @bot.command()
 async def f1(ctx, valor: str):
     try:
-        valor_final = parse_valor(valor)
+        valor = valor.upper().replace(",", ".")
+
+        multiplicador = 1
+
+        if valor.endswith("K"):
+            multiplicador = 1_000
+            valor = valor[:-1]
+        elif valor.endswith("M"):
+            multiplicador = 1_000_000
+            valor = valor[:-1]
+        elif valor.endswith("B"):
+            multiplicador = 1_000_000_000
+            valor = valor[:-1]
+
+        valor_final = float(valor) * multiplicador
 
         payload = {
             "usuario": ctx.author.display_name,
@@ -79,34 +93,38 @@ async def f1(ctx, valor: str):
 
         if response.status_code == 200:
             await ctx.send(
-                f"🏁 F1 registrado para {ctx.author.display_name}: {formatar_valor(valor_final)}"
+                f"🏁 F1 registrado para {ctx.author.display_name}: {valor_final:,.2f}"
             )
         else:
             await ctx.send("❌ Erro ao salvar F1")
 
     except:
-        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 2.8G")
+        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 500K")
 
-# 🔥 RANKING
+
+# =======================
+# RANKING F1
+# =======================
 @bot.command()
-async def ranking(ctx):
+async def rankingf1(ctx):
     try:
-        response = requests.get(f"{API_URL}/ranking")
+        response = requests.get(f"{API_URL}/ranking-f1")
         data = response.json()
 
         if not data:
-            await ctx.send("Sem dados hoje.")
+            await ctx.send("Sem dados F1.")
             return
 
-        msg = "🏆 Ranking do Dia:\n"
+        msg = "🏎️ Ranking F1:\n"
 
         for i, player in enumerate(data, start=1):
-            msg += f"{i}. {player['usuario']} - {formatar_valor(float(player['total']))}\n"
+            msg += f"{i}. {player['usuario']} - {float(player['total']):,.2f}\n"
 
         await ctx.send(msg)
 
     except Exception as e:
-        await ctx.send("❌ Erro ao buscar ranking")
+        await ctx.send("Erro ao buscar ranking F1")
         print(e)
+
 
 bot.run(TOKEN)
