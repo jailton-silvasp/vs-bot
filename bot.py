@@ -1,4 +1,4 @@
-print("🔥 BOT INICIANDO VERSÃO FINAL 🔥")
+print("🔥 BOT INICIANDO VERSÃO FINAL V2 🔥")
 
 import discord
 from discord.ext import commands
@@ -37,7 +37,7 @@ def converter_valor(valor_str):
     return numero
 
 # ------------------------
-# FORMATAÇÃO (K, M, G)
+# FORMATAÇÃO PADRÃO (AUTO)
 # ------------------------
 def formatar_valor(valor):
     if valor >= 1_000_000_000:
@@ -50,7 +50,13 @@ def formatar_valor(valor):
         return f"{valor:.2f}"
 
 # ------------------------
-# TESTE DE API
+# FORMATAÇÃO VS (SEMPRE M)
+# ------------------------
+def formatar_vs(valor):
+    return f"{valor/1_000_000:.0f}M"
+
+# ------------------------
+# TESTE API
 # ------------------------
 @bot.command()
 async def pingapi(ctx):
@@ -85,7 +91,7 @@ async def vs(ctx, valor: str):
             print(r.text)
             return
 
-        valor_formatado = formatar_valor(numero)
+        valor_formatado = formatar_vs(numero)
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {valor_formatado}"
@@ -150,8 +156,11 @@ async def ranking(ctx):
         mensagem = "🏆 **RANKING TOP 10**\n\n"
 
         for i, player in enumerate(data[:10], start=1):
-            nome = player["usuario"]
-            valor = formatar_valor(float(player["valor"]))
+            nome = player.get("usuario", "Desconhecido")
+
+            # 🔥 CORREÇÃO AQUI
+            valor_raw = player.get("valor") or player.get("total") or 0
+            valor = formatar_valor(float(valor_raw))
 
             mensagem += f"{i}. {nome} — {valor}\n"
 
