@@ -1,10 +1,11 @@
+import os
 import discord
 from discord.ext import commands
 import requests
 from datetime import datetime
 
-TOKEN = "MTUwMDE4MzI0MTQ5MDA0MjkzMA.GJHFeD.NMupUx8sH25KjYJeO5C-Xeg_I_5wMlxS7eDVrM"
-API_URL = "https://api-svs-production.up.railway.app"
+TOKEN = os.getenv("TOKEN")
+API_URL = os.getenv("API_URL")
 
 intents = discord.Intents.default()
 intents.message_content = True
