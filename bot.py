@@ -18,7 +18,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ------------------------
 def converter_valor(valor_str):
     valor_str = valor_str.upper().replace(",", ".")
-    match = re.match(r"^(\d+(\.\d+)?)([KMB]?)$", valor_str)
+    match = re.match(r"^(\d+(\.\d+)?)([KMG]?)$", valor_str)  # <-- AQUI CORRIGIDO
 
     if not match:
         return None
@@ -30,7 +30,7 @@ def converter_valor(valor_str):
         numero *= 1_000
     elif sufixo == "M":
         numero *= 1_000_000
-    elif sufixo == "B":
+    elif sufixo == "G":  # <-- TROCA DE B PARA G
         numero *= 1_000_000_000
 
     return numero
