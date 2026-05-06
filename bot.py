@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 
 TOKEN = "MTUwMDE4MzI0MTQ5MDA0MjkzMA.GJHFeD.NMupUx8sH25KjYJeO5C-Xeg_I_5wMlxS7eDVrM"
-API_URL = "https://api-svs-production.up.railway.app/"
+API_URL = "https://api-svs-production.up.railway.app"
 
 intents = discord.Intents.default()
 intents.message_content = True
