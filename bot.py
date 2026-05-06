@@ -1,36 +1,82 @@
+import discord
+from discord.ext import commands
+import requests
+import os
+import re
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+API_URL = os.getenv("API_URL")
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# ------------------------
+# FUNÇÃO CONVERSÃO
+# ------------------------
+def converter_valor(valor_str):
+    valor_str = valor_str.upper().replace(",", ".")
+    match = re.match(r"^(\d+(\.\d+)?)([KMB]?)$", valor_str)
+
+    if not match:
+        return None
+
+    numero = float(match.group(1))
+    sufixo = match.group(3)
+
+    if sufixo == "K":
+        numero *= 1_000
+    elif sufixo == "M":
+        numero *= 1_000_000
+    elif sufixo == "B":
+        numero *= 1_000_000_000
+
+    return numero
+
+# ------------------------
+# FUNÇÃO FORMATAÇÃO
+# ------------------------
+def formatar_valor(valor):
+    if valor >= 1_000_000_000:
+        return f"{valor/1_000_000_000:.2f}G"
+    elif valor >= 1_000_000:
+        return f"{valor/1_000_000:.2f}M"
+    elif valor >= 1_000:
+        return f"{valor/1_000:.2f}K"
+    else:
+        return f"{valor:.2f}"
+
+# ------------------------
+# COMANDO F1
+# ------------------------
 @bot.command()
 async def f1(ctx, valor: str):
+    numero = converter_valor(valor)
+
+    if numero is None:
+        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
+        return
+
+    payload = {
+        "usuario": ctx.author.name,
+        "discord_id": str(ctx.author.id),
+        "valor": numero
+    }
+
     try:
-        valor = valor.upper().replace(",", ".")
+        requests.post(f"{API_URL}/f1", json=payload)
 
-        multiplicador = 1
+        valor_formatado = formatar_valor(numero)
 
-        if valor.endswith("K"):
-            multiplicador = 1_000
-            valor = valor[:-1]
-        elif valor.endswith("M"):
-            multiplicador = 1_000_000
-            valor = valor[:-1]
-        elif valor.endswith("B") or valor.endswith("G"):
-            multiplicador = 1_000_000_000
-            valor = valor[:-1]
+        await ctx.send(
+            f"🏁 F1 registrado para 『{ctx.author.name}』: {valor_formatado}"
+        )
 
-        valor_final = float(valor) * multiplicador
+    except Exception as e:
+        await ctx.send(f"❌ Erro ao registrar: {e}")
 
-        payload = {
-            "usuario": ctx.author.display_name,
-            "discord_id": str(ctx.author.id),
-            "valor": valor_final
-        }
-
-        response = requests.post(f"{API_URL}/f1", json=payload)
-
-        if response.status_code == 200:
-            await ctx.send(
-                f"🏁 F1 registrado para {ctx.author.display_name}: {valor_final:,.2f}"
-            )
-        else:
-            await ctx.send("❌ Erro ao salvar F1")
-
-    except:
-        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 500K, 2.8G")
+# ------------------------
+# INICIAR BOT
+# ------------------------
+bot.run(TOKEN)
