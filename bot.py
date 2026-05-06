@@ -71,6 +71,12 @@ async def pingapi(ctx):
 # ------------------------
 @bot.command()
 async def vs(ctx, valor: str):
+    valor = valor.upper().replace(",", ".")
+
+    # 🔥 SE NÃO TEM LETRA → ASSUME MILHÕES
+    if not re.search(r"[KMG]", valor):
+        valor += "M"
+
     numero = converter_valor(valor)
 
     if numero is None:
@@ -91,7 +97,8 @@ async def vs(ctx, valor: str):
             print(r.text)
             return
 
-        valor_formatado = formatar_vs(numero)
+        # 🔥 AGORA SEMPRE MOSTRA EM M
+        valor_formatado = f"{numero/1_000_000:.1f}M"
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {valor_formatado}"
@@ -99,7 +106,7 @@ async def vs(ctx, valor: str):
 
     except Exception as e:
         await ctx.send(f"❌ Erro: {e}")
-
+        
 # ------------------------
 # COMANDO F1
 # ------------------------
