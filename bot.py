@@ -1,13 +1,20 @@
-print("🔥 BOT INICIANDO VERSÃO FINAL V2 🔥")
+print("🔥 BOT INICIANDO COM ROTINA SVS 🔥")
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import requests
 import os
 import re
+from datetime import datetime
+import pytz
 
 TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
+
+# 👉 COLOQUE O ID DO CANAL "informativo"
+CANAL_INFORMATIVO = 1500181167583006720  # ALTERAR
+
+tz = pytz.timezone("America/Sao_Paulo")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -15,7 +22,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ------------------------
-# CONVERSÃO (K, M, G)
+# CONVERSÃO
 # ------------------------
 def converter_valor(valor_str):
     valor_str = valor_str.upper().replace(",", ".")
@@ -37,7 +44,7 @@ def converter_valor(valor_str):
     return numero
 
 # ------------------------
-# FORMATAÇÃO PADRÃO (AUTO)
+# FORMATAÇÃO
 # ------------------------
 def formatar_valor(valor):
     if valor >= 1_000_000_000:
@@ -50,63 +57,11 @@ def formatar_valor(valor):
         return f"{valor:.2f}"
 
 # ------------------------
-# FORMATAÇÃO VS (SEMPRE M)
+# PEGAR NOME EXIBIÇÃO
 # ------------------------
-def formatar_vs(valor):
-    return f"{valor/1_000_000:.0f}M"
+def get_nome(ctx):
+    return ctx.author.display_name
 
-# ------------------------
-# TESTE API
-# ------------------------
-@bot.command()
-async def pingapi(ctx):
-    try:
-        r = requests.get(API_URL)
-        await ctx.send(f"✅ API ONLINE ({r.status_code})")
-    except:
-        await ctx.send("❌ API OFFLINE")
-
-# ------------------------
-# COMANDO VS
-# ------------------------
-@bot.command()
-async def vs(ctx, valor: str):
-    valor = valor.upper().replace(",", ".")
-
-    # 🔥 SE NÃO TEM LETRA → ASSUME MILHÕES
-    if not re.search(r"[KMG]", valor):
-        valor += "M"
-
-    numero = converter_valor(valor)
-
-    if numero is None:
-        await ctx.send("❌ Valor inválido! Ex: 10, 2.5M, 1.2G, 500K")
-        return
-
-    payload = {
-        "usuario": ctx.author.display_name,
-        "discord_id": str(ctx.author.id),
-        "valor": numero
-    }
-
-    try:
-        r = requests.post(f"{API_URL}/vs", json=payload)
-
-        if r.status_code != 200:
-            await ctx.send("❌ Erro ao salvar VS")
-            print(r.text)
-            return
-
-        # 🔥 AGORA SEMPRE MOSTRA EM M
-        valor_formatado = f"{numero/1_000_000:.1f}M"
-
-        await ctx.send(
-            f"🔥 VS registrado para 『{ctx.author.display_name}』: {valor_formatado}"
-        )
-
-    except Exception as e:
-        await ctx.send(f"❌ Erro: {e}")
-        
 # ------------------------
 # COMANDO F1
 # ------------------------
@@ -119,62 +74,140 @@ async def f1(ctx, valor: str):
         return
 
     payload = {
-        "usuario": ctx.author.display_name,
+        "usuario": get_nome(ctx),
         "discord_id": str(ctx.author.id),
         "valor": numero
     }
 
     try:
-        r = requests.post(f"{API_URL}/f1", json=payload)
-
-        if r.status_code != 200:
-            await ctx.send("❌ Erro ao salvar F1")
-            print(r.text)
-            return
-
-        valor_formatado = formatar_valor(numero)
+        requests.post(f"{API_URL}/f1", json=payload)
 
         await ctx.send(
-            f"🏁 F1 registrado para 『{ctx.author.display_name}』: {valor_formatado}"
+            f"🏁 F1 registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
         )
 
     except Exception as e:
-        await ctx.send(f"❌ Erro: {e}")
+        await ctx.send(f"❌ Erro ao registrar: {e}")
 
 # ------------------------
-# COMANDO RANKING
+# COMANDO VS
+# ------------------------
+@bot.command()
+async def vs(ctx, valor: str):
+    numero = converter_valor(valor)
+
+    if numero is None:
+        await ctx.send("❌ Valor inválido! Ex: 10M, 2.5G")
+        return
+
+    payload = {
+        "usuario": get_nome(ctx),
+        "discord_id": str(ctx.author.id),
+        "valor": numero
+    }
+
+    try:
+        requests.post(f"{API_URL}/vs", json=payload)
+
+        await ctx.send(
+            f"🔥 VS registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
+        )
+
+    except Exception as e:
+        await ctx.send(f"❌ Erro ao registrar: {e}")
+
+# ------------------------
+# RANKING
 # ------------------------
 @bot.command()
 async def ranking(ctx):
     try:
         r = requests.get(f"{API_URL}/ranking")
-
-        if r.status_code != 200:
-            await ctx.send("❌ Erro ao buscar ranking")
-            print(r.text)
-            return
-
         data = r.json()
 
         if not data:
-            await ctx.send("📭 Nenhum registro encontrado.")
+            await ctx.send("📉 Sem dados ainda.")
             return
 
-        mensagem = "🏆 **RANKING TOP 10**\n\n"
+        msg = "🏆 TOP PLAYERS\n\n"
 
-        for i, player in enumerate(data[:10], start=1):
-            nome = player.get("usuario", "Desconhecido")
+        for i, user in enumerate(data[:10], start=1):
+            msg += f"{i}. {user['usuario']} - {formatar_valor(user['total'])}\n"
 
-            # 🔥 CORREÇÃO AQUI
-            valor_raw = player.get("valor") or player.get("total") or 0
-            valor = formatar_valor(float(valor_raw))
-
-            mensagem += f"{i}. {nome} — {valor}\n"
-
-        await ctx.send(mensagem)
+        await ctx.send(msg)
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
+
+# ------------------------
+# ROTINA SVS (00:00)
+# ------------------------
+@tasks.loop(minutes=1)
+async def rotina_svs():
+    agora = datetime.now(tz)
+
+    if agora.hour == 0 and agora.minute == 0:
+        canal = bot.get_channel(CANAL_INFORMATIVO)
+
+        if not canal:
+            return
+
+        dia = agora.weekday()
+
+        mensagens = {
+
+0: """📅 Dia 1 – Expansão do Abrigo
+👾 Guardar: Radares, Equipamentos, Núcleos de Energia, Baús da Sorte...
+
+🏗>> Construção
+📜>> Medalhas da Sabedoria
+🔬>> Pesquisa
+⚙️>> Aceleradores
+💰>> Coleta de Recursos""",
+
+1: """📅 Dia 2 – Iniciativa de Heróis
+📡 Missões de Radar
+🎖 Recrutamento Prime
+🧩 Fragmentos de Herói
+💡 Dica Pro: Treinar tropas antes do reset""",
+
+2: """📅 Dia 3 – Continue Progredindo
+🚚 Caminhões nível S
+🕶 Missões laranja
+🪖 Treinamento
+🔧 Equipamento Vermelho""",
+
+3: """📅 Dia 4 – Especialista em Armas
+📡 Radar
+💥 Rallys
+🧟 Zumbis
+⚙️ Aceleradores""",
+
+4: """📅 Dia 5 – Crescimento Holístico
+🧩 Fragmentos
+🔋 Núcleos
+📜 Medalhas
+💡 Use tudo acumulado""",
+
+5: """📅 Dia 6 – Destruidor de Inimigos
+🚚 Caminhões S
+🎯 PvP
+💀 Perdas contam
+💡 Use escudo se necessário""",
+
+6: """🔥 SVS ENCERRADO
+💪 Dia de recuperação"""
+        }
+
+        await canal.send(mensagens[dia])
+
+# ------------------------
+# EVENTO READY
+# ------------------------
+@bot.event
+async def on_ready():
+    print(f"🤖 Logado como {bot.user}")
+    rotina_svs.start()
 
 # ------------------------
 # START
