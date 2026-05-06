@@ -31,11 +31,11 @@ async def on_ready():
 # 🔥 COMANDO VS (DIÁRIO)
 # ================================
 @bot.command()
-async def vs(ctx, pontos: int):
+async def vs(ctx, pontos: float):
     try:
         payload = {
             "player_name": ctx.author.display_name,
-            "points": pontos
+            "points": int(pontos)
         }
 
         response = requests.post(f"{API_URL}/vs", json=payload)
@@ -85,11 +85,11 @@ async def ranking(ctx):
 # 🔥 COMANDO F1 (SEMANAL)
 # ================================
 @bot.command()
-async def f1(ctx, pontos: int):
+async def f1(ctx, pontos: float):
     try:
         payload = {
             "player_name": ctx.author.display_name,
-            "points": pontos
+            "points": int(pontos)
         }
 
         response = requests.post(f"{API_URL}/f1", json=payload)
