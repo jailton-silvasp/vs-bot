@@ -77,7 +77,7 @@ async def f1(ctx, valor: str):
         elif valor.endswith("M"):
             multiplicador = 1_000_000
             valor = valor[:-1]
-        elif valor.endswith("B"):
+        elif valor.endswith("B") or valor.endswith("G"):
             multiplicador = 1_000_000_000
             valor = valor[:-1]
 
@@ -99,8 +99,7 @@ async def f1(ctx, valor: str):
             await ctx.send("❌ Erro ao salvar F1")
 
     except:
-        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 500K")
-
+        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2B, 500K, 2.8G")
 
 # =======================
 # RANKING F1
