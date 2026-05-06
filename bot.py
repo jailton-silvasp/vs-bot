@@ -1,54 +1,59 @@
 import discord
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from discord.ext import commands
+import requests
 from datetime import datetime
-import os
-import json
 
-# ===== DISCORD =====
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = "MTUwMDE4MzI0MTQ5MDA0MjkzMA.GJHFeD.NMupUx8sH25KjYJeO5C-Xeg_I_5wMlxS7eDVrM"
+API_URL = "https://api-svs-production.up.railway.app/"
 
 intents = discord.Intents.default()
 intents.message_content = True
-client = discord.Client(intents=intents)
 
-# ===== GOOGLE =====
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client_gspread = gspread.authorize(creds)
+# ================= VS =================
+@bot.command()
+async def vs(ctx, valor: float):
+    usuario = ctx.author.display_name
+    discord_id = str(ctx.author.id)
 
-sheet = client_gspread.open("Controle VS").sheet1
+    requests.post(f"{API_URL}/vs", json={
+        "usuario": usuario,
+        "discord_id": discord_id,
+        "valor": valor
+    })
 
-@client.event
-async def on_ready():
-    print(f'Logado como {client.user}')
+    await ctx.send(f"🔥 {usuario} registrou {valor} VS")
 
-@client.event
-async def on_message(message):
-    if message.author.bot:
-        return
+# ================= F1 =================
+@bot.command()
+async def f1(ctx, valor: float):
+    usuario = ctx.author.display_name
+    discord_id = str(ctx.author.id)
 
-    # 🔒 BLOQUEIA USO FORA DO CANAL VS
-    if message.content.startswith("!vs"):
+    semana = datetime.now().strftime("%Y-%W")
 
-        if message.channel.id != int(os.getenv("CANAL_VS")):
-            return
+    requests.post(f"{API_URL}/f1", json={
+        "usuario": usuario,
+        "discord_id": discord_id,
+        "valor": valor,
+        "semana": semana
+    })
 
-        try:
-            valor = float(message.content.split(" ")[1])
-            usuario = str(message.author)
-            data = datetime.now().strftime("%d/%m/%Y")
+    await ctx.send(f"🏁 {usuario} registrou {valor} F1")
 
-            sheet.append_row([data, usuario, valor])
+# ================= RANKING =================
+@bot.command()
+async def ranking(ctx):
+    hoje = datetime.now().strftime("%Y-%m-%d")
 
-            await message.channel.send(f"✅ VS registrado: {valor}M")
+    res = requests.get(f"{API_URL}/ranking?data={hoje}")
+    data = res.json()
 
-        except:
-            await message.channel.send("❌ Use: !vs 2.5")
+    msg = "🏆 Ranking VS:\n"
+    for i, r in enumerate(data, 1):
+        msg += f"{i}. {r['usuario']} - {r['total']}\n"
 
-client.run(TOKEN)
+    await ctx.send(msg)
+
+bot.run(TOKEN)
