@@ -4,7 +4,7 @@ import requests
 import os
 import re
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
 
 intents = discord.Intents.default()
