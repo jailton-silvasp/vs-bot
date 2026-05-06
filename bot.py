@@ -1,60 +1,109 @@
 import os
 import discord
-from discord.ext import commands
 import requests
-from datetime import datetime
+from discord.ext import commands
 
-TOKEN = os.getenv("TOKEN")
+# ================================
+# 🔥 CONFIG
+# ================================
+TOKEN = os.getenv("DISCORD_TOKEN")
 API_URL = os.getenv("API_URL")
+
+if not TOKEN:
+    raise ValueError("❌ DISCORD_TOKEN não definido!")
+
+if not API_URL:
+    raise ValueError("❌ API_URL não definida!")
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ================= VS =================
+# ================================
+# 🔥 EVENTO ONLINE
+# ================================
+@bot.event
+async def on_ready():
+    print(f"✅ Bot online como {bot.user}")
+
+# ================================
+# 🔥 COMANDO VS (DIÁRIO)
+# ================================
 @bot.command()
-async def vs(ctx, valor: float):
-    usuario = ctx.author.display_name
-    discord_id = str(ctx.author.id)
+async def vs(ctx, pontos: int):
+    try:
+        payload = {
+            "player_name": ctx.author.display_name,
+            "points": pontos
+        }
 
-    requests.post(f"{API_URL}/vs", json={
-        "usuario": usuario,
-        "discord_id": discord_id,
-        "valor": valor
-    })
+        response = requests.post(f"{API_URL}/vs", json=payload)
 
-    await ctx.send(f"🔥 {usuario} registrou {valor} VS")
+        if response.status_code == 200:
+            await ctx.send(f"🔥 VS registrado: {pontos}")
+        else:
+            await ctx.send("❌ Erro ao salvar VS")
 
-# ================= F1 =================
-@bot.command()
-async def f1(ctx, valor: float):
-    usuario = ctx.author.display_name
-    discord_id = str(ctx.author.id)
+    except Exception as e:
+        await ctx.send("❌ Erro ao registrar VS")
+        print("Erro VS:", e)
 
-    semana = datetime.now().strftime("%Y-%W")
-
-    requests.post(f"{API_URL}/f1", json={
-        "usuario": usuario,
-        "discord_id": discord_id,
-        "valor": valor,
-        "semana": semana
-    })
-
-    await ctx.send(f"🏁 {usuario} registrou {valor} F1")
-
-# ================= RANKING =================
+# ================================
+# 🔥 COMANDO RANKING
+# ================================
 @bot.command()
 async def ranking(ctx):
-    hoje = datetime.now().strftime("%Y-%m-%d")
+    try:
+        response = requests.get(f"{API_URL}/ranking")
 
-    res = requests.get(f"{API_URL}/ranking?data={hoje}")
-    data = res.json()
+        if response.status_code != 200:
+            await ctx.send("❌ API não respondeu")
+            return
 
-    msg = "🏆 Ranking VS:\n"
-    for i, r in enumerate(data, 1):
-        msg += f"{i}. {r['usuario']} - {r['total']}\n"
+        data = response.json()
 
-    await ctx.send(msg)
+        if not data:
+            await ctx.send("⚠️ Sem dados hoje.")
+            return
 
+        msg = "🏆 **Ranking do Dia** 🏆\n\n"
+
+        for i, player in enumerate(data, start=1):
+            nome = player.get("player_name", "Desconhecido")
+            pontos = player.get("points", 0)
+
+            msg += f"{i}. {nome} - {pontos}\n"
+
+        await ctx.send(msg)
+
+    except Exception as e:
+        await ctx.send("❌ Erro ao buscar ranking")
+        print("Erro Ranking:", e)
+
+# ================================
+# 🔥 COMANDO F1 (SEMANAL)
+# ================================
+@bot.command()
+async def f1(ctx, pontos: int):
+    try:
+        payload = {
+            "player_name": ctx.author.display_name,
+            "points": pontos
+        }
+
+        response = requests.post(f"{API_URL}/f1", json=payload)
+
+        if response.status_code == 200:
+            await ctx.send(f"🏎️ F1 registrado: {pontos}")
+        else:
+            await ctx.send("❌ Erro ao salvar F1")
+
+    except Exception as e:
+        await ctx.send("❌ Erro ao registrar F1")
+        print("Erro F1:", e)
+
+# ================================
+# 🔥 START BOT
+# ================================
 bot.run(TOKEN)
