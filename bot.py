@@ -6,11 +6,11 @@ from discord.ext import commands
 # ================================
 # 🔥 CONFIG
 # ================================
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
 
 if not TOKEN:
-    raise ValueError("❌ DISCORD_TOKEN não definido!")
+    raise ValueError("❌ TOKEN não definido!")
 
 if not API_URL:
     raise ValueError("❌ API_URL não definida!")
