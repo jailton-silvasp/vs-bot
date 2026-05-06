@@ -123,16 +123,39 @@ async def vs(ctx, valor: str):
 async def ranking(ctx):
     try:
         r = requests.get(f"{API_URL}/ranking")
+
+        if r.status_code != 200:
+            await ctx.send(f"❌ API erro: {r.status_code}")
+            return
+
         data = r.json()
 
         if not data:
             await ctx.send("📉 Sem dados ainda.")
             return
 
-        msg = "🏆 TOP PLAYERS\n\n"
+        msg = "🏆 RANKING TOP 10\n\n"
 
         for i, user in enumerate(data[:10], start=1):
-            msg += f"{i}. {user['usuario']} - {formatar_valor(user['total'])}\n"
+
+            discord_id = user.get("discord_id")
+
+            # 🔥 BUSCA USUÁRIO REAL NO DISCORD
+            member = ctx.guild.get_member(int(discord_id)) if discord_id else None
+
+            if member:
+                nome = member.display_name
+            else:
+                nome = user.get("usuario") or "Desconhecido"
+
+            total = user.get("total")
+
+            try:
+                total = float(total)
+            except:
+                total = 0
+
+            msg += f"{i}. {nome} — {formatar_valor(total)}\n"
 
         await ctx.send(msg)
 
