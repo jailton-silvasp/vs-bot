@@ -147,18 +147,26 @@ async def ranking(ctx):
 
         for i, user in enumerate(data[:10], start=1):
 
-            # -----------------------
-            # NOME
-            # -----------------------
-            discord_id = user.get("discord_id")
-            nome = user.get("usuario", "Desconhecido")
+# -----------------------
+# NOME (DISCORD COM FALLBACK CORRETO)
+# -----------------------
+discord_id = user.get("discord_id")
 
-            try:
-                member = ctx.guild.get_member(int(discord_id)) if discord_id else None
-                if member:
-                    nome = member.display_name
-            except:
-                pass
+nome = None
+
+try:
+    member = await ctx.guild.fetch_member(int(discord_id))
+    nome = member.display_name
+except:
+    nome = None
+
+# fallback seguro
+if not nome:
+    member = ctx.guild.get_member(int(discord_id)) if discord_id else None
+    if member:
+        nome = member.display_name
+    else:
+        nome = user.get("usuario", "Desconhecido")
 
             # -----------------------
             # VALOR (SEGURO 100%)
