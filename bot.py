@@ -143,19 +143,39 @@ async def ranking(ctx):
 
         for i, user in enumerate(data[:10], start=1):
 
+            # ------------------------
+            # NOME
+            # ------------------------
             discord_id = user.get("discord_id")
-            member = ctx.guild.get_member(int(discord_id)) if discord_id else None
 
-            nome = member.display_name if member else user.get("usuario")
+            member = None
+            try:
+                if discord_id:
+                    member = ctx.guild.get_member(int(discord_id))
+            except:
+                member = None
 
-            total = user.get("total")
+            nome = member.display_name if member else user.get("usuario", "Desconhecido")
 
-            msg += f"{i}. {nome} — {formatar_valor(total)}\n"
+            # ------------------------
+            # VALOR (FORÇA CONVERSÃO REAL)
+            # ------------------------
+            total_raw = user.get("total", 0)
+
+            try:
+                total_num = float(total_raw)
+            except:
+                total_num = 0
+
+            total_formatado = formatar_valor(total_num)
+
+            msg += f"{i}. {nome} — {total_formatado}\n"
 
         await ctx.send(msg)
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
+        print(e)
 
 # ------------------------
 # ROTINA SVS
