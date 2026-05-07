@@ -12,7 +12,7 @@ TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
 
 # 👉 COLOQUE O ID DO CANAL "informativo"
-CANAL_INFORMATIVO = 1500181167583006720  # ALTERAR
+CANAL_INFORMATIVO = 1500181167583006720
 
 tz = pytz.timezone("America/Sao_Paulo")
 
@@ -57,7 +57,7 @@ def formatar_valor(valor):
         return f"{valor:.2f}"
 
 # ------------------------
-# PEGAR NOME EXIBIÇÃO
+# NOME EXIBIÇÃO
 # ------------------------
 def get_nome(ctx):
     return ctx.author.display_name
@@ -117,12 +117,13 @@ async def vs(ctx, valor: str):
         await ctx.send(f"❌ Erro ao registrar: {e}")
 
 # ------------------------
-# RANKING
+# RANKING (DIÁRIO)
 # ------------------------
 @bot.command()
 async def ranking(ctx):
     try:
-        r = requests.get(f"{API_URL}/ranking")
+        # 🔥 FORÇA RANKING DO DIA
+        r = requests.get(f"{API_URL}/ranking?period=day")
 
         if r.status_code != 200:
             await ctx.send(f"❌ API erro: {r.status_code}")
@@ -131,16 +132,14 @@ async def ranking(ctx):
         data = r.json()
 
         if not data:
-            await ctx.send("📉 Sem dados ainda.")
+            await ctx.send("📉 Sem dados no ranking de hoje ainda.")
             return
 
-        msg = "🏆 RANKING TOP 10\n\n"
+        msg = "🏆 RANKING DO DIA (TOP 10)\n\n"
 
         for i, user in enumerate(data[:10], start=1):
 
             discord_id = user.get("discord_id")
-
-            # 🔥 BUSCA USUÁRIO REAL NO DISCORD
             member = ctx.guild.get_member(int(discord_id)) if discord_id else None
 
             if member:
@@ -178,8 +177,7 @@ async def rotina_svs():
         dia = agora.weekday()
 
         mensagens = {
-
-0: """📅 Dia 1 – Expansão do Abrigo
+            0: """📅 Dia 1 – Expansão do Abrigo
 👾 Guardar: Radares, Equipamentos, Núcleos de Energia, Baús da Sorte...
 
 🏗>> Construção
@@ -188,44 +186,44 @@ async def rotina_svs():
 ⚙️>> Aceleradores
 💰>> Coleta de Recursos""",
 
-1: """📅 Dia 2 – Iniciativa de Heróis
+            1: """📅 Dia 2 – Iniciativa de Heróis
 📡 Missões de Radar
 🎖 Recrutamento Prime
 🧩 Fragmentos de Herói
 💡 Dica Pro: Treinar tropas antes do reset""",
 
-2: """📅 Dia 3 – Continue Progredindo
+            2: """📅 Dia 3 – Continue Progredindo
 🚚 Caminhões nível S
 🕶 Missões laranja
 🪖 Treinamento
 🔧 Equipamento Vermelho""",
 
-3: """📅 Dia 4 – Especialista em Armas
+            3: """📅 Dia 4 – Especialista em Armas
 📡 Radar
 💥 Rallys
 🧟 Zumbis
 ⚙️ Aceleradores""",
 
-4: """📅 Dia 5 – Crescimento Holístico
+            4: """📅 Dia 5 – Crescimento Holístico
 🧩 Fragmentos
 🔋 Núcleos
 📜 Medalhas
 💡 Use tudo acumulado""",
 
-5: """📅 Dia 6 – Destruidor de Inimigos
+            5: """📅 Dia 6 – Destruidor de Inimigos
 🚚 Caminhões S
 🎯 PvP
 💀 Perdas contam
 💡 Use escudo se necessário""",
 
-6: """🔥 SVS ENCERRADO
+            6: """🔥 SVS ENCERRADO
 💪 Dia de recuperação"""
         }
 
-        await canal.send(mensagens[dia])
+        await canal.send(f"@everyone\n\n{mensagens[dia]}")
 
 # ------------------------
-# EVENTO READY
+# READY
 # ------------------------
 @bot.event
 async def on_ready():
