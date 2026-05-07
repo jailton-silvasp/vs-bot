@@ -129,6 +129,10 @@ async def ranking(ctx):
     try:
         r = requests.get(f"{API_URL}/ranking?period=day", timeout=10)
 
+        if r.status_code != 200:
+            await ctx.send(f"❌ API erro: {r.status_code}")
+            return
+
         data = r.json()
 
         if not data:
@@ -140,7 +144,7 @@ async def ranking(ctx):
         for i, user in enumerate(data[:10], start=1):
 
             # -----------------------
-            # NOME 100% SEGURO
+            # NOME
             # -----------------------
             discord_id = user.get("discord_id")
             nome = user.get("usuario", "Desconhecido")
@@ -153,16 +157,16 @@ async def ranking(ctx):
                 pass
 
             # -----------------------
-            # VALOR (CORREÇÃO FINAL REAL)
+            # VALOR (SEGURO 100%)
             # -----------------------
             total_raw = user.get("total", 0)
 
-try:
-    total_num = float(total_raw)
-except:
-    total_num = 0.0
+            try:
+                total_num = float(str(total_raw).replace(",", "."))
+            except:
+                total_num = 0.0
 
-total_formatado = formatar_valor(total_num)
+            msg += f"{i}. {nome} — {formatar_valor(total_num)}\n"
 
         await ctx.send(msg)
 
