@@ -127,11 +127,7 @@ async def f1(ctx, valor: str):
 @bot.command()
 async def ranking(ctx):
     try:
-        r = requests.get(f"{API_URL}/ranking?period=day")
-
-        if r.status_code != 200:
-            await ctx.send(f"❌ API erro: {r.status_code}")
-            return
+        r = requests.get(f"{API_URL}/ranking?period=day", timeout=10)
 
         data = r.json()
 
@@ -143,33 +139,30 @@ async def ranking(ctx):
 
         for i, user in enumerate(data[:10], start=1):
 
-            # ------------------------
-            # NOME
-            # ------------------------
+            # -----------------------
+            # NOME 100% SEGURO
+            # -----------------------
             discord_id = user.get("discord_id")
+            nome = user.get("usuario", "Desconhecido")
 
-            member = None
             try:
-                if discord_id:
-                    member = ctx.guild.get_member(int(discord_id))
+                member = ctx.guild.get_member(int(discord_id)) if discord_id else None
+                if member:
+                    nome = member.display_name
             except:
-                member = None
+                pass
 
-            nome = member.display_name if member else user.get("usuario", "Desconhecido")
-
-            # ------------------------
-            # VALOR (FORÇA CONVERSÃO REAL)
-            # ------------------------
+            # -----------------------
+            # VALOR (CORREÇÃO FINAL REAL)
+            # -----------------------
             total_raw = user.get("total", 0)
 
             try:
-                total_num = float(total_raw)
+                total_num = float(str(total_raw).replace(",", "."))
             except:
-                total_num = 0
+                total_num = 0.0
 
-            total_formatado = formatar_valor(total_num)
-
-            msg += f"{i}. {nome} — {total_formatado}\n"
+            msg += f"{i}. {nome} — {formatar_valor(total_num)}\n"
 
         await ctx.send(msg)
 
