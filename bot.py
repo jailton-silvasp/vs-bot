@@ -25,6 +25,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ------------------------
 def converter_valor(valor_str):
     valor_str = valor_str.upper().replace(",", ".")
+
     match = re.match(r"^(\d+(\.\d+)?)([KMG]?)$", valor_str)
 
     if not match:
@@ -33,7 +34,10 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
-    if sufixo == "K":
+    # 🔥 REGRA NOVA: se não tiver sufixo, assume M
+    if sufixo == "":
+        numero *= 1_000_000
+    elif sufixo == "K":
         numero *= 1_000
     elif sufixo == "M":
         numero *= 1_000_000
