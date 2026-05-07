@@ -122,7 +122,6 @@ async def vs(ctx, valor: str):
 @bot.command()
 async def ranking(ctx):
     try:
-        # 🔥 FORÇA RANKING DO DIA
         r = requests.get(f"{API_URL}/ranking?period=day")
 
         if r.status_code != 200:
@@ -147,14 +146,11 @@ async def ranking(ctx):
             else:
                 nome = user.get("usuario") or "Desconhecido"
 
+            # 🔥 AQUI É A CORREÇÃO
             total = user.get("total")
 
-            try:
-                total = float(total)
-            except:
-                total = 0
-
-            msg += f"{i}. {nome} — {formatar_valor(total)}\n"
+            # 👉 NÃO CONVERTER MAIS
+            msg += f"{i}. {nome} — {total}\n"
 
         await ctx.send(msg)
 
