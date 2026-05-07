@@ -11,7 +11,6 @@ import pytz
 TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
 
-# 👉 COLOQUE O ID DO CANAL "informativo"
 CANAL_INFORMATIVO = 1500181167583006720
 
 tz = pytz.timezone("America/Sao_Paulo")
@@ -22,7 +21,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ------------------------
-# CONVERSÃO
+# CONVERSÃO (K/M/G → número)
 # ------------------------
 def converter_valor(valor_str):
     valor_str = valor_str.upper().replace(",", ".")
@@ -44,9 +43,11 @@ def converter_valor(valor_str):
     return numero
 
 # ------------------------
-# FORMATAÇÃO
+# FORMATAÇÃO GLOBAL (EXIBIÇÃO)
 # ------------------------
 def formatar_valor(valor):
+    valor = float(valor)
+
     if valor >= 1_000_000_000:
         return f"{valor/1_000_000_000:.2f}G"
     elif valor >= 1_000_000:
@@ -63,7 +64,34 @@ def get_nome(ctx):
     return ctx.author.display_name
 
 # ------------------------
-# COMANDO F1
+# VS COMANDO
+# ------------------------
+@bot.command()
+async def vs(ctx, valor: str):
+    numero = converter_valor(valor)
+
+    if numero is None:
+        await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
+        return
+
+    payload = {
+        "usuario": get_nome(ctx),
+        "discord_id": str(ctx.author.id),
+        "valor": numero
+    }
+
+    try:
+        requests.post(f"{API_URL}/vs", json=payload)
+
+        await ctx.send(
+            f"🔥 VS registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
+        )
+
+    except Exception as e:
+        await ctx.send(f"❌ Erro ao registrar VS: {e}")
+
+# ------------------------
+# F1 COMANDO
 # ------------------------
 @bot.command()
 async def f1(ctx, valor: str):
@@ -87,34 +115,7 @@ async def f1(ctx, valor: str):
         )
 
     except Exception as e:
-        await ctx.send(f"❌ Erro ao registrar: {e}")
-
-# ------------------------
-# COMANDO VS
-# ------------------------
-@bot.command()
-async def vs(ctx, valor: str):
-    numero = converter_valor(valor)
-
-    if numero is None:
-        await ctx.send("❌ Valor inválido! Ex: 10M, 2.5G")
-        return
-
-    payload = {
-        "usuario": get_nome(ctx),
-        "discord_id": str(ctx.author.id),
-        "valor": numero
-    }
-
-    try:
-        requests.post(f"{API_URL}/vs", json=payload)
-
-        await ctx.send(
-            f"🔥 VS registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
-        )
-
-    except Exception as e:
-        await ctx.send(f"❌ Erro ao registrar: {e}")
+        await ctx.send(f"❌ Erro ao registrar F1: {e}")
 
 # ------------------------
 # RANKING (DIÁRIO)
@@ -141,16 +142,11 @@ async def ranking(ctx):
             discord_id = user.get("discord_id")
             member = ctx.guild.get_member(int(discord_id)) if discord_id else None
 
-            if member:
-                nome = member.display_name
-            else:
-                nome = user.get("usuario") or "Desconhecido"
+            nome = member.display_name if member else user.get("usuario")
 
-            # 🔥 AQUI É A CORREÇÃO
             total = user.get("total")
 
-            # 👉 NÃO CONVERTER MAIS
-            msg += f"{i}. {nome} — {total}\n"
+            msg += f"{i}. {nome} — {formatar_valor(total)}\n"
 
         await ctx.send(msg)
 
@@ -158,7 +154,7 @@ async def ranking(ctx):
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
 
 # ------------------------
-# ROTINA SVS (00:00)
+# ROTINA SVS
 # ------------------------
 @tasks.loop(minutes=1)
 async def rotina_svs():
