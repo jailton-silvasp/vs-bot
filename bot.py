@@ -157,12 +157,12 @@ async def ranking(ctx):
             # -----------------------
             total_raw = user.get("total", 0)
 
-            try:
-                total_num = float(str(total_raw).replace(",", "."))
-            except:
-                total_num = 0.0
+try:
+    total_num = float(total_raw)
+except:
+    total_num = 0.0
 
-            msg += f"{i}. {nome} — {formatar_valor(total_num)}\n"
+total_formatado = formatar_valor(total_num)
 
         await ctx.send(msg)
 
