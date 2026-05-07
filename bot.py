@@ -34,7 +34,7 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
-    # 🔥 REGRA NOVA: se não tiver sufixo, assume M
+    # sem sufixo = M
     if sufixo == "":
         numero *= 1_000_000
     elif sufixo == "K":
@@ -46,8 +46,9 @@ def converter_valor(valor_str):
 
     return numero
 
+
 # ------------------------
-# FORMATAÇÃO GLOBAL (EXIBIÇÃO)
+# FORMATAÇÃO GLOBAL
 # ------------------------
 def formatar_valor(valor):
     try:
@@ -64,15 +65,9 @@ def formatar_valor(valor):
     else:
         return f"{valor:.2f}"
 
-# ------------------------
-# NOME EXIBIÇÃO (ANTI DUPLICAÇÃO)
-# ------------------------
-def get_nome(ctx):
-    nome = ctx.author.display_name
-    return nome.replace("『", "").replace("』", "")
 
 # ------------------------
-# VS COMANDO
+# VS
 # ------------------------
 @bot.command()
 async def vs(ctx, valor: str):
@@ -83,7 +78,7 @@ async def vs(ctx, valor: str):
         return
 
     payload = {
-        "usuario": get_nome(ctx),
+        "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero
     }
@@ -92,14 +87,15 @@ async def vs(ctx, valor: str):
         requests.post(f"{API_URL}/vs", json=payload)
 
         await ctx.send(
-            f"🔥 VS registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
+            f"🔥 VS registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
         )
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar VS: {e}")
 
+
 # ------------------------
-# F1 COMANDO
+# F1
 # ------------------------
 @bot.command()
 async def f1(ctx, valor: str):
@@ -110,7 +106,7 @@ async def f1(ctx, valor: str):
         return
 
     payload = {
-        "usuario": get_nome(ctx),
+        "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero
     }
@@ -119,11 +115,12 @@ async def f1(ctx, valor: str):
         requests.post(f"{API_URL}/f1", json=payload)
 
         await ctx.send(
-            f"🏁 F1 registrado para 『{get_nome(ctx)}』: {formatar_valor(numero)}"
+            f"🏁 F1 registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
         )
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar F1: {e}")
+
 
 # ------------------------
 # RANKING (DIÁRIO)
@@ -147,34 +144,18 @@ async def ranking(ctx):
 
         for i, user in enumerate(data[:10], start=1):
 
-# -----------------------
-# NOME (DISCORD COM FALLBACK CORRETO)
-# -----------------------
-discord_id = user.get("discord_id")
+            discord_id = user.get("discord_id")
 
-nome = None
+            member = None
+            try:
+                member = ctx.guild.get_member(int(discord_id)) if discord_id else None
+            except:
+                member = None
 
-try:
-    member = await ctx.guild.fetch_member(int(discord_id))
-    nome = member.display_name
-except:
-    nome = None
-
-# fallback seguro
-if not nome:
-    member = ctx.guild.get_member(int(discord_id)) if discord_id else None
-    if member:
-        nome = member.display_name
-    else:
-        nome = user.get("usuario", "Desconhecido")
-
-            # -----------------------
-            # VALOR (SEGURO 100%)
-            # -----------------------
-            total_raw = user.get("total", 0)
+            nome = member.display_name if member else user.get("usuario", "Desconhecido")
 
             try:
-                total_num = float(str(total_raw).replace(",", "."))
+                total_num = float(user.get("total", 0))
             except:
                 total_num = 0.0
 
@@ -186,8 +167,9 @@ if not nome:
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
         print(e)
 
+
 # ------------------------
-# ROTINA SVS
+# ROTINA SVS (DIÁRIA)
 # ------------------------
 @tasks.loop(minutes=1)
 async def rotina_svs():
@@ -247,6 +229,7 @@ async def rotina_svs():
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
 
+
 # ------------------------
 # READY
 # ------------------------
@@ -254,6 +237,7 @@ async def rotina_svs():
 async def on_ready():
     print(f"🤖 Logado como {bot.user}")
     rotina_svs.start()
+
 
 # ------------------------
 # START
