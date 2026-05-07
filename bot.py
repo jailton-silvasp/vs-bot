@@ -46,7 +46,10 @@ def converter_valor(valor_str):
 # FORMATAÇÃO GLOBAL (EXIBIÇÃO)
 # ------------------------
 def formatar_valor(valor):
-    valor = float(valor)
+    try:
+        valor = float(valor)
+    except:
+        return "0.00"
 
     if valor >= 1_000_000_000:
         return f"{valor/1_000_000_000:.2f}G"
@@ -58,10 +61,11 @@ def formatar_valor(valor):
         return f"{valor:.2f}"
 
 # ------------------------
-# NOME EXIBIÇÃO
+# NOME EXIBIÇÃO (ANTI DUPLICAÇÃO)
 # ------------------------
 def get_nome(ctx):
-    return ctx.author.display_name
+    nome = ctx.author.display_name
+    return nome.replace("『", "").replace("』", "")
 
 # ------------------------
 # VS COMANDO
