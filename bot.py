@@ -34,7 +34,6 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
-    # sem sufixo = M
     if sufixo == "":
         numero *= 1_000_000
     elif sufixo == "K":
@@ -80,7 +79,8 @@ async def vs(ctx, valor: str):
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": str(ctx.author.display_avatar.url)  # 🔥 NOVO CAMPO
     }
 
     try:
@@ -108,7 +108,8 @@ async def f1(ctx, valor: str):
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": str(ctx.author.display_avatar.url)  # 🔥 NOVO CAMPO
     }
 
     try:
