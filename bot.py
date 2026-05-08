@@ -5,6 +5,7 @@ from discord.ext import commands, tasks
 import requests
 import os
 import re
+import asyncio
 from datetime import datetime
 import pytz
 
@@ -34,7 +35,6 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
-    # sem sufixo = M
     if sufixo == "":
         numero *= 1_000_000
     elif sufixo == "K":
@@ -45,7 +45,6 @@ def converter_valor(valor_str):
         numero *= 1_000_000_000
 
     return numero
-
 
 # ------------------------
 # FORMATAÇÃO GLOBAL
@@ -65,7 +64,6 @@ def formatar_valor(valor):
     else:
         return f"{valor:.2f}"
 
-
 # ------------------------
 # VS
 # ------------------------
@@ -80,11 +78,12 @@ async def vs(ctx, valor: str):
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": str(ctx.author.display_avatar.url)
     }
 
     try:
-        requests.post(f"{API_URL}/vs", json=payload)
+        requests.post(f"{API_URL}/vs", json=payload, timeout=10)
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
@@ -92,7 +91,6 @@ async def vs(ctx, valor: str):
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar VS: {e}")
-
 
 # ------------------------
 # F1
@@ -108,11 +106,12 @@ async def f1(ctx, valor: str):
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": str(ctx.author.display_avatar.url)
     }
 
     try:
-        requests.post(f"{API_URL}/f1", json=payload)
+        requests.post(f"{API_URL}/f1", json=payload, timeout=10)
 
         await ctx.send(
             f"🏁 F1 registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
@@ -120,7 +119,6 @@ async def f1(ctx, valor: str):
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar F1: {e}")
-
 
 # ------------------------
 # RANKING (DIÁRIO)
@@ -150,7 +148,7 @@ async def ranking(ctx):
             try:
                 member = ctx.guild.get_member(int(discord_id)) if discord_id else None
             except:
-                member = None
+                pass
 
             nome = member.display_name if member else user.get("usuario", "Desconhecido")
 
@@ -166,7 +164,6 @@ async def ranking(ctx):
     except Exception as e:
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
         print(e)
-
 
 # ------------------------
 # ROTINA SVS (DIÁRIA)
@@ -229,7 +226,6 @@ async def rotina_svs():
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
 
-
 # ------------------------
 # READY
 # ------------------------
@@ -238,8 +234,17 @@ async def on_ready():
     print(f"🤖 Logado como {bot.user}")
     rotina_svs.start()
 
+# ------------------------
+# START (ANTI-CRASH / ANTI-LOOP)
+# ------------------------
+async def start_bot():
+    while True:
+        try:
+            print("🚀 Conectando ao Discord...")
+            await bot.start(TOKEN)
+        except Exception as e:
+            print(f"❌ Erro ao conectar: {e}")
+            print("⏳ Tentando novamente em 10 segundos...")
+            await asyncio.sleep(10)
 
-# ------------------------
-# START
-# ------------------------
-bot.run(TOKEN)
+asyncio.run(start_bot())
