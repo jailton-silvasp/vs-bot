@@ -24,9 +24,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # AVATAR (NOVO - MÍNIMO)
 # ------------------------
 def get_avatar_url(user):
-    if user.avatar:
-        return f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}.png"
-    return None
+    try:
+        if user.avatar:
+            return user.avatar.url
+        return user.default_avatar.url
+    except:
+        return None
 
 
 # ------------------------
