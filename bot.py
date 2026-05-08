@@ -7,7 +7,6 @@ import os
 import re
 from datetime import datetime
 import pytz
-import time
 
 TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
@@ -20,6 +19,15 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# ------------------------
+# AVATAR (NOVO - MÍNIMO)
+# ------------------------
+def get_avatar_url(user):
+    if user.avatar:
+        return f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}.png"
+    return None
+
 
 # ------------------------
 # CONVERSÃO (K/M/G → número)
@@ -35,6 +43,7 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
+    # sem sufixo = M
     if sufixo == "":
         numero *= 1_000_000
     elif sufixo == "K":
@@ -77,11 +86,13 @@ async def vs(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
+    avatar_url = get_avatar_url(ctx.author)  # 🔥 NOVO
+
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": str(ctx.author.display_avatar.url)
+        "avatar_url": avatar_url  # 🔥 NOVO
     }
 
     try:
@@ -106,11 +117,13 @@ async def f1(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
+    avatar_url = get_avatar_url(ctx.author)  # 🔥 NOVO
+
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": str(ctx.author.display_avatar.url)
+        "avatar_url": avatar_url  # 🔥 NOVO
     }
 
     try:
@@ -171,7 +184,7 @@ async def ranking(ctx):
 
 
 # ------------------------
-# ROTINA SVS
+# ROTINA SVS (DIÁRIA)
 # ------------------------
 @tasks.loop(minutes=1)
 async def rotina_svs():
@@ -186,13 +199,47 @@ async def rotina_svs():
         dia = agora.weekday()
 
         mensagens = {
-            0: "📅 Dia 1 – Expansão do Abrigo",
-            1: "📅 Dia 2 – Iniciativa de Heróis",
-            2: "📅 Dia 3 – Continue Progredindo",
-            3: "📅 Dia 4 – Especialista em Armas",
-            4: "📅 Dia 5 – Crescimento Holístico",
-            5: "📅 Dia 6 – Destruidor de Inimigos",
-            6: "🔥 SVS ENCERRADO"
+            0: """📅 Dia 1 – Expansão do Abrigo
+👾 Guardar: Radares, Equipamentos, Núcleos de Energia, Baús da Sorte...
+
+🏗>> Construção
+📜>> Medalhas da Sabedoria
+🔬>> Pesquisa
+⚙️>> Aceleradores
+💰>> Coleta de Recursos""",
+
+            1: """📅 Dia 2 – Iniciativa de Heróis
+📡 Missões de Radar
+🎖 Recrutamento Prime
+🧩 Fragmentos de Herói
+💡 Dica Pro: Treinar tropas antes do reset""",
+
+            2: """📅 Dia 3 – Continue Progredindo
+🚚 Caminhões nível S
+🕶 Missões laranja
+🪖 Treinamento
+🔧 Equipamento Vermelho""",
+
+            3: """📅 Dia 4 – Especialista em Armas
+📡 Radar
+💥 Rallys
+🧟 Zumbis
+⚙️ Aceleradores""",
+
+            4: """📅 Dia 5 – Crescimento Holístico
+🧩 Fragmentos
+🔋 Núcleos
+📜 Medalhas
+💡 Use tudo acumulado""",
+
+            5: """📅 Dia 6 – Destruidor de Inimigos
+🚚 Caminhões S
+🎯 PvP
+💀 Perdas contam
+💡 Use escudo se necessário""",
+
+            6: """🔥 SVS ENCERRADO
+💪 Dia de recuperação"""
         }
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
@@ -204,18 +251,22 @@ async def rotina_svs():
 @bot.event
 async def on_ready():
     print(f"🤖 Logado como {bot.user}")
-    if not rotina_svs.is_running():
-        rotina_svs.start()
+    rotina_svs.start()
 
 
 # ------------------------
-# START (ANTI-RATE LIMIT)
+# START
 # ------------------------
-while True:
-    try:
-        print("🚀 Iniciando bot...")
-        bot.run(TOKEN)
-    except Exception as e:
-        print(f"❌ Erro crítico: {e}")
-        print("⏳ Aguardando 60 segundos para evitar rate limit...")
-        time.sleep(60)
+import asyncio
+
+async def start_bot():
+    while True:
+        try:
+            print("🚀 Iniciando bot...")
+            await bot.start(TOKEN)
+        except Exception as e:
+            print(f"❌ Erro crítico: {e}")
+            print("⏳ Aguardando 60 segundos para evitar rate limit...")
+            await asyncio.sleep(60)
+
+asyncio.run(start_bot())
