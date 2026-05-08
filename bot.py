@@ -243,4 +243,13 @@ async def on_ready():
 # ------------------------
 # START
 # ------------------------
-bot.run(TOKEN)
+import time
+
+while True:
+    try:
+        print("🚀 Tentando iniciar o bot...")
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"❌ Erro ao iniciar bot: {e}")
+        print("⏳ Aguardando 10 segundos antes de tentar novamente...")
+        time.sleep(10)
