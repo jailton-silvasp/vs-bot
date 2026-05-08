@@ -5,9 +5,9 @@ from discord.ext import commands, tasks
 import requests
 import os
 import re
-import asyncio
 from datetime import datetime
 import pytz
+import time
 
 TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
@@ -46,6 +46,7 @@ def converter_valor(valor_str):
 
     return numero
 
+
 # ------------------------
 # FORMATAÇÃO GLOBAL
 # ------------------------
@@ -63,6 +64,7 @@ def formatar_valor(valor):
         return f"{valor/1_000:.2f}K"
     else:
         return f"{valor:.2f}"
+
 
 # ------------------------
 # VS
@@ -83,7 +85,7 @@ async def vs(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/vs", json=payload, timeout=10)
+        requests.post(f"{API_URL}/vs", json=payload)
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
@@ -91,6 +93,7 @@ async def vs(ctx, valor: str):
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar VS: {e}")
+
 
 # ------------------------
 # F1
@@ -111,7 +114,7 @@ async def f1(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/f1", json=payload, timeout=10)
+        requests.post(f"{API_URL}/f1", json=payload)
 
         await ctx.send(
             f"🏁 F1 registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
@@ -119,6 +122,7 @@ async def f1(ctx, valor: str):
 
     except Exception as e:
         await ctx.send(f"❌ Erro ao registrar F1: {e}")
+
 
 # ------------------------
 # RANKING (DIÁRIO)
@@ -148,7 +152,7 @@ async def ranking(ctx):
             try:
                 member = ctx.guild.get_member(int(discord_id)) if discord_id else None
             except:
-                pass
+                member = None
 
             nome = member.display_name if member else user.get("usuario", "Desconhecido")
 
@@ -165,8 +169,9 @@ async def ranking(ctx):
         await ctx.send(f"❌ Erro ao buscar ranking: {e}")
         print(e)
 
+
 # ------------------------
-# ROTINA SVS (DIÁRIA)
+# ROTINA SVS
 # ------------------------
 @tasks.loop(minutes=1)
 async def rotina_svs():
@@ -181,50 +186,17 @@ async def rotina_svs():
         dia = agora.weekday()
 
         mensagens = {
-            0: """📅 Dia 1 – Expansão do Abrigo
-👾 Guardar: Radares, Equipamentos, Núcleos de Energia, Baús da Sorte...
-
-🏗>> Construção
-📜>> Medalhas da Sabedoria
-🔬>> Pesquisa
-⚙️>> Aceleradores
-💰>> Coleta de Recursos""",
-
-            1: """📅 Dia 2 – Iniciativa de Heróis
-📡 Missões de Radar
-🎖 Recrutamento Prime
-🧩 Fragmentos de Herói
-💡 Dica Pro: Treinar tropas antes do reset""",
-
-            2: """📅 Dia 3 – Continue Progredindo
-🚚 Caminhões nível S
-🕶 Missões laranja
-🪖 Treinamento
-🔧 Equipamento Vermelho""",
-
-            3: """📅 Dia 4 – Especialista em Armas
-📡 Radar
-💥 Rallys
-🧟 Zumbis
-⚙️ Aceleradores""",
-
-            4: """📅 Dia 5 – Crescimento Holístico
-🧩 Fragmentos
-🔋 Núcleos
-📜 Medalhas
-💡 Use tudo acumulado""",
-
-            5: """📅 Dia 6 – Destruidor de Inimigos
-🚚 Caminhões S
-🎯 PvP
-💀 Perdas contam
-💡 Use escudo se necessário""",
-
-            6: """🔥 SVS ENCERRADO
-💪 Dia de recuperação"""
+            0: "📅 Dia 1 – Expansão do Abrigo",
+            1: "📅 Dia 2 – Iniciativa de Heróis",
+            2: "📅 Dia 3 – Continue Progredindo",
+            3: "📅 Dia 4 – Especialista em Armas",
+            4: "📅 Dia 5 – Crescimento Holístico",
+            5: "📅 Dia 6 – Destruidor de Inimigos",
+            6: "🔥 SVS ENCERRADO"
         }
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
+
 
 # ------------------------
 # READY
@@ -232,19 +204,18 @@ async def rotina_svs():
 @bot.event
 async def on_ready():
     print(f"🤖 Logado como {bot.user}")
-    rotina_svs.start()
+    if not rotina_svs.is_running():
+        rotina_svs.start()
+
 
 # ------------------------
-# START (ANTI-CRASH / ANTI-LOOP)
+# START (ANTI-RATE LIMIT)
 # ------------------------
-async def start_bot():
-    while True:
-        try:
-            print("🚀 Conectando ao Discord...")
-            await bot.start(TOKEN)
-        except Exception as e:
-            print(f"❌ Erro ao conectar: {e}")
-            print("⏳ Tentando novamente em 10 segundos...")
-            await asyncio.sleep(10)
-
-asyncio.run(start_bot())
+while True:
+    try:
+        print("🚀 Iniciando bot...")
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"❌ Erro crítico: {e}")
+        print("⏳ Aguardando 60 segundos para evitar rate limit...")
+        time.sleep(60)
