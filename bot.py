@@ -5,7 +5,7 @@ from discord.ext import commands, tasks
 import requests
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 TOKEN = os.getenv("TOKEN")
@@ -91,11 +91,20 @@ async def vs(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
+    agora = datetime.now(tz)
+
+    # 🔥 REGRA NOVA: após 23h conta como próximo dia
+    if agora.hour >= 23:
+        data = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        data = agora.strftime("%Y-%m-%d")
+
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": avatar_url
+        "avatar_url": avatar_url,
+        "data": data  # ✅ NOVO
     }
 
     try:
@@ -199,7 +208,7 @@ async def ranking(ctx):
 async def rotina_svs():
     agora = datetime.now(tz)
 
-    if agora.hour == 0 and agora.minute == 0:
+    if agora.hour == 23 and agora.minute == 0:
         canal = bot.get_channel(CANAL_INFORMATIVO)
 
         if not canal:
