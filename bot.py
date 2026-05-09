@@ -89,13 +89,13 @@ async def vs(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
-    avatar_url = get_avatar_url(ctx.author)  # 🔥 NOVO
+    avatar_url = get_avatar_url(ctx.author)
 
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": avatar_url  # 🔥 NOVO
+        "avatar_url": avatar_url
     }
 
     try:
@@ -110,7 +110,7 @@ async def vs(ctx, valor: str):
 
 
 # ------------------------
-# F1
+# F1 (AJUSTADO CORRETAMENTE)
 # ------------------------
 @bot.command()
 async def f1(ctx, valor: str):
@@ -120,13 +120,19 @@ async def f1(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
-    avatar_url = get_avatar_url(ctx.author)  # 🔥 NOVO
+    avatar_url = get_avatar_url(ctx.author)
+
+    agora = datetime.now(tz)
+    data = agora.strftime("%Y-%m-%d")
+    semana = agora.isocalendar()[1]
 
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": avatar_url  # 🔥 NOVO
+        "avatar_url": avatar_url,
+        "data": data,          # ✅ NOVO
+        "semana": semana       # ✅ NOVO
     }
 
     try:
@@ -187,7 +193,7 @@ async def ranking(ctx):
 
 
 # ------------------------
-# ROTINA SVS (DIÁRIA)
+# ROTINA SVS (DIÁRIA) - INTACTA
 # ------------------------
 @tasks.loop(minutes=1)
 async def rotina_svs():
@@ -258,7 +264,7 @@ async def on_ready():
 
 
 # ------------------------
-# START
+# START (INTACTO)
 # ------------------------
 import asyncio
 
@@ -269,7 +275,7 @@ async def start_bot():
             await bot.start(TOKEN)
         except Exception as e:
             print(f"❌ Erro crítico: {e}")
-            print("⏳ Aguardando 60 segundos para evitar rate limit...")
+            print("⏳ Aguardando 60 segundos...")
             await asyncio.sleep(60)
 
 asyncio.run(start_bot())
