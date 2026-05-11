@@ -204,6 +204,9 @@ async def ranking(ctx):
 # ------------------------
 # ROTINA SVS (DIÁRIA) - INTACTA
 # ------------------------
+from datetime import datetime
+from discord.ext import tasks
+
 @tasks.loop(minutes=1)
 async def rotina_svs():
     agora = datetime.now(tz)
@@ -214,7 +217,8 @@ async def rotina_svs():
         if not canal:
             return
 
-        dia = agora.weekday()
+        # AJUSTE AQUI: pega o próximo dia
+        dia = (agora.weekday() + 1) % 7
 
         mensagens = {
             0: """📅 Dia 1 – Expansão do Abrigo
@@ -261,7 +265,6 @@ async def rotina_svs():
         }
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
-
 
 # ------------------------
 # READY
