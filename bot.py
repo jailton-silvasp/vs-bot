@@ -91,7 +91,7 @@ async def vs(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
-    agora = datetime.now(tz)
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
 
     # 🔥 REGRA NOVA: após 23h conta como próximo dia
     if agora.hour >= 23:
@@ -131,7 +131,7 @@ async def f1(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
-    agora = datetime.now(tz)
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
     data = agora.strftime("%Y-%m-%d")
     semana = agora.isocalendar()[1]
 
@@ -209,7 +209,7 @@ from discord.ext import tasks
 
 @tasks.loop(minutes=1)
 async def rotina_svs():
-    agora = datetime.now(tz)
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
 
     if agora.hour == 23 and agora.minute == 0:
         canal = bot.get_channel(CANAL_INFORMATIVO)
