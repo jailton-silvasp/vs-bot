@@ -249,10 +249,24 @@ async def rotina_svs():
 ⚙️ Aceleradores""",
 
             4: """📅 Dia 5 – Crescimento Holístico
-🧩 Fragmentos
-🔋 Núcleos
-📜 Medalhas
-💡 Use tudo acumulado""",
+🧩 Fragmentos de herói (azul, roxo e laranja)
+🔋 Núcleos de Energia
+📜 Medalhas (Sabedoria e Honra)
+🏗️ Melhorias de edifícios
+🔬 Pesquisa tecnológica
+🎖️ Treinamento e promoção de soldados
+📐 Plantas de design / Planta DX
+⚙️ Engrenagens e Ligas de Titânio
+🛡️ Equipamentos exclusivos / Equipamento vermelho D6
+🎯 Precisão para construção
+📦 Baús de chips laranja
+🍖 Rações Táticas Avançadas
+🧪 Poções Nutritivas
+💡 Chips de Potencial
+📘 Regulamentos de Treinamento (Comum e Avançado)
+
+🚀 Use tudo acumulado e maximize sua pontuação!
+""",
 
             5: """📅 Dia 6 – Destruidor de Inimigos
 🚚 Caminhões S
