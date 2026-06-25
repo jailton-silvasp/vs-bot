@@ -175,7 +175,7 @@ async def ranking(ctx):
 
         msg = "🏆 RANKING DO DIA (TOP 10)\n\n"
 
-        for i, user in enumerate(data[:10], start=1):
+        for i, user in enumerate(data, start=1):
 
             discord_id = user.get("discord_id")
 
