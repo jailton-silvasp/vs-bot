@@ -12,17 +12,39 @@ TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
 
 CANAL_INFORMATIVO = 1500181167583006720
-
 tz = pytz.timezone("America/Sao_Paulo")
+
+# ------------------------
+# ESTRUTURA ELO
+# ------------------------
+
+PRINCIPAL_ROLE_ID = int(os.getenv("PRINCIPAL_ROLE_ID", "0"))
+ACADEMY_ROLE_ID = int(os.getenv("ACADEMY_ROLE_ID", "0"))
+
+def get_estrutura(member):
+    """
+    Identifica se o jogador pertence à Principal ou Academy.
+    """
+    role_ids = {role.id for role in member.roles}
+
+    if PRINCIPAL_ROLE_ID in role_ids and ACADEMY_ROLE_ID in role_ids:
+        return None
+
+    if PRINCIPAL_ROLE_ID in role_ids:
+        return "Principal"
+
+    if ACADEMY_ROLE_ID in role_ids:
+        return "Academy"
+
+    return None
+
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ------------------------
-# AVATAR (NOVO - MÍNIMO)
-# ------------------------
+
+# AVATAR
 def get_avatar_url(user):
     try:
         if user.avatar:
@@ -32,12 +54,9 @@ def get_avatar_url(user):
         return None
 
 
-# ------------------------
-# CONVERSÃO (K/M/G → número)
-# ------------------------
+# CONVERSÃO
 def converter_valor(valor_str):
     valor_str = valor_str.upper().replace(",", ".")
-
     match = re.match(r"^(\d+(\.\d+)?)([KMG]?)$", valor_str)
 
     if not match:
@@ -46,7 +65,6 @@ def converter_valor(valor_str):
     numero = float(match.group(1))
     sufixo = match.group(3)
 
-    # sem sufixo = M
     if sufixo == "":
         numero *= 1_000_000
     elif sufixo == "K":
@@ -59,9 +77,7 @@ def converter_valor(valor_str):
     return numero
 
 
-# ------------------------
-# FORMATAÇÃO GLOBAL
-# ------------------------
+# FORMATAÇÃO
 def formatar_valor(valor):
     try:
         valor = float(valor)
@@ -78,9 +94,7 @@ def formatar_valor(valor):
         return f"{valor:.2f}"
 
 
-# ------------------------
 # VS
-# ------------------------
 @bot.command()
 async def vs(ctx, valor: str):
     numero = converter_valor(valor)
@@ -91,9 +105,16 @@ async def vs(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
+    estrutura = get_estrutura(ctx.author)
+
+    if estrutura is None:
+        await ctx.send(
+            "❌ Não foi possível identificar se você pertence à Principal ou Academy."
+        )
+        return
+
     agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
 
-    # 🔥 REGRA NOVA: após 23h conta como próximo dia
     if agora.hour >= 23:
         data = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
     else:
@@ -104,7 +125,8 @@ async def vs(ctx, valor: str):
         "discord_id": str(ctx.author.id),
         "valor": numero,
         "avatar_url": avatar_url,
-        "data": data  # ✅ NOVO
+        "data": data,
+        "estrutura": estrutura
     }
 
     try:
@@ -118,9 +140,7 @@ async def vs(ctx, valor: str):
         await ctx.send(f"❌ Erro ao registrar VS: {e}")
 
 
-# ------------------------
-# F1 (AJUSTADO CORRETAMENTE)
-# ------------------------
+# F1
 @bot.command()
 async def f1(ctx, valor: str):
     numero = converter_valor(valor)
@@ -131,7 +151,16 @@ async def f1(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
+    estrutura = get_estrutura(ctx.author)
+
+    if estrutura is None:
+        await ctx.send(
+            "❌ Não foi possível identificar se você pertence à Principal ou Academy."
+        )
+        return
+
     agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
+
     data = agora.strftime("%Y-%m-%d")
     semana = agora.isocalendar()[1]
 
@@ -140,8 +169,9 @@ async def f1(ctx, valor: str):
         "discord_id": str(ctx.author.id),
         "valor": numero,
         "avatar_url": avatar_url,
-        "data": data,          # ✅ NOVO
-        "semana": semana       # ✅ NOVO
+        "data": data,
+        "semana": semana,
+        "estrutura": estrutura
     }
 
     try:
@@ -155,9 +185,7 @@ async def f1(ctx, valor: str):
         await ctx.send(f"❌ Erro ao registrar F1: {e}")
 
 
-# ------------------------
-# RANKING (DIÁRIO)
-# ------------------------
+# RANKING
 @bot.command()
 async def ranking(ctx):
     try:
@@ -178,14 +206,22 @@ async def ranking(ctx):
         for i, user in enumerate(data, start=1):
 
             discord_id = user.get("discord_id")
-
             member = None
+
             try:
-                member = ctx.guild.get_member(int(discord_id)) if discord_id else None
+                member = (
+                    ctx.guild.get_member(int(discord_id))
+                    if discord_id
+                    else None
+                )
             except:
                 member = None
 
-            nome = member.display_name if member else user.get("usuario", "Desconhecido")
+            nome = (
+                member.display_name
+                if member
+                else user.get("usuario", "Desconhecido")
+            )
 
             try:
                 total_num = float(user.get("total", 0))
@@ -201,29 +237,31 @@ async def ranking(ctx):
         print(e)
 
 
-# ------------------------
-# ROTINA SVS (DIÁRIA) - INTACTA
-# ------------------------
+# ROTINA SVS
 from datetime import datetime
 from discord.ext import tasks
 
+
 @tasks.loop(minutes=1)
 async def rotina_svs():
-    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
+
+    agora = datetime.utcnow().replace(
+        tzinfo=pytz.utc
+    ).astimezone(tz)
 
     if agora.hour == 23 and agora.minute == 0:
+
         canal = bot.get_channel(CANAL_INFORMATIVO)
 
         if not canal:
             return
 
-        # AJUSTE AQUI: pega o próximo dia
         dia = (agora.weekday() + 1) % 7
 
         mensagens = {
+
             0: """📅 Dia 1 – Expansão do Abrigo
 👾 Guardar: Radares, Equipamentos, Núcleos de Energia, Baús da Sorte...
-
 🏗>> Construção
 📜>> Medalhas da Sabedoria
 🔬>> Pesquisa
@@ -264,7 +302,6 @@ async def rotina_svs():
 🧪 Poções Nutritivas
 💡 Chips de Potencial
 📘 Regulamentos de Treinamento (Comum e Avançado)
-
 🚀 Use tudo acumulado e maximize sua pontuação!
 """,
 
@@ -278,30 +315,39 @@ async def rotina_svs():
 💪 Dia de recuperação"""
         }
 
-        await canal.send(f"@everyone\n\n{mensagens[dia]}")
+        await canal.send(
+            f"@everyone\n\n{mensagens[dia]}"
+        )
 
-# ------------------------
-# READY
-# ------------------------
+
 @bot.event
 async def on_ready():
+
     print(f"🤖 Logado como {bot.user}")
+
     rotina_svs.start()
 
 
-# ------------------------
-# START (INTACTO)
-# ------------------------
 import asyncio
 
+
 async def start_bot():
+
     while True:
+
         try:
+
             print("🚀 Iniciando bot...")
+
             await bot.start(TOKEN)
+
         except Exception as e:
+
             print(f"❌ Erro crítico: {e}")
+
             print("⏳ Aguardando 60 segundos...")
+
             await asyncio.sleep(60)
+
 
 asyncio.run(start_bot())
