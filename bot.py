@@ -307,7 +307,6 @@ async def on_ready():
         rotina_svs.start()
 
     if not manter_api_ativa.is_running():
-        await manter_api_ativa()
         manter_api_ativa.start()
 
 
