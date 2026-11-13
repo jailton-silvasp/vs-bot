@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +14,24 @@ def load_production_function():
     )
     module = ast.Module(body=[function], type_ignores=[])
     namespace = {"API_URL": "https://api.example.test", "requests": None}
+    exec(compile(module, "bot.py", "exec"), namespace)
+    return namespace
+
+
+def load_keepalive_function():
+    source = Path("bot.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    function = next(
+        node for node in tree.body
+        if isinstance(node, ast.AsyncFunctionDef) and node.name == "manter_api_ativa"
+    )
+    function.decorator_list = []
+    module = ast.Module(body=[function], type_ignores=[])
+    namespace = {
+        "API_URL": "https://api.example.test",
+        "requests": None,
+        "asyncio": asyncio,
+    }
     exec(compile(module, "bot.py", "exec"), namespace)
     return namespace
 
@@ -78,6 +97,56 @@ class RegistrarNaApiTests(unittest.TestCase):
         self.namespace["API_URL"] = None
         with self.assertRaisesRegex(RuntimeError, "API_URL"):
             self.namespace["registrar_na_api"]("vs", self.payload)
+        self.assertEqual(self.calls, [])
+
+
+class KeepaliveTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.namespace = load_keepalive_function()
+        self.calls = []
+        self.sleeps = []
+
+        async def fake_to_thread(function, *args, **kwargs):
+            return function(*args, **kwargs)
+
+        async def fake_sleep(seconds):
+            self.sleeps.append(seconds)
+
+        self.namespace["asyncio"] = SimpleNamespace(
+            to_thread=fake_to_thread,
+            sleep=fake_sleep,
+        )
+
+    async def test_api_e_banco_disponiveis_encerram_na_primeira_tentativa(self):
+        def fake_get(url, **kwargs):
+            self.calls.append((url, kwargs))
+            return FakeResponse(data={"ok": True, "database": "connected"})
+
+        self.namespace["requests"] = SimpleNamespace(get=fake_get)
+        await self.namespace["manter_api_ativa"]()
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0][0], "https://api.example.test/health")
+        self.assertEqual(self.calls[0][1]["timeout"], (5, 15))
+        self.assertEqual(self.sleeps, [])
+
+    async def test_banco_indisponivel_dispara_tres_tentativas_com_backoff(self):
+        def fake_get(url, **kwargs):
+            self.calls.append((url, kwargs))
+            return FakeResponse(data={"ok": False, "database": "unavailable"})
+
+        self.namespace["requests"] = SimpleNamespace(get=fake_get)
+        await self.namespace["manter_api_ativa"]()
+        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(self.sleeps, [5, 10])
+
+    async def test_api_url_ausente_nao_faz_requisicao(self):
+        def fake_get(url, **kwargs):
+            self.calls.append((url, kwargs))
+            raise AssertionError("Não deveria chamar a API")
+
+        self.namespace["API_URL"] = None
+        self.namespace["requests"] = SimpleNamespace(get=fake_get)
+        await self.namespace["manter_api_ativa"]()
         self.assertEqual(self.calls, [])
 
 
