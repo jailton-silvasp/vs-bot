@@ -1,5 +1,6 @@
 print("🔥 BOT INICIANDO COM ROTINA SVS 🔥")
 
+import asyncio
 import discord
 from discord.ext import commands, tasks
 import requests
@@ -19,6 +20,32 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+
+# ------------------------
+# COMUNICAÇÃO COM A API
+# ------------------------
+
+def registrar_na_api(endpoint, payload):
+    if not API_URL:
+        raise RuntimeError("A variável API_URL não está configurada.")
+
+    response = requests.post(
+        f"{API_URL.rstrip('/')}/{endpoint}",
+        json=payload,
+        timeout=(5, 20)
+    )
+    response.raise_for_status()
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise RuntimeError("A API retornou uma resposta inválida.") from exc
+
+    if not isinstance(data, dict) or data.get("ok") is not True:
+        raise RuntimeError("A API não confirmou o salvamento.")
+
+    return True
 
 # ------------------------
 # CONVERSÃO (K/M/G → número)
@@ -84,14 +111,18 @@ async def vs(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/vs", json=payload)
+        await asyncio.to_thread(registrar_na_api, "vs", payload)
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
         )
 
     except Exception as e:
-        await ctx.send(f"❌ Erro ao registrar VS: {e}")
+        print(f"❌ Falha ao registrar VS: {e}")
+        await ctx.send(
+            "⚠️ Não consegui confirmar o salvamento do VS. "
+            "Confira o dashboard antes de tentar registrar novamente."
+        )
 
 
 # ------------------------
@@ -112,14 +143,18 @@ async def f1(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/f1", json=payload)
+        await asyncio.to_thread(registrar_na_api, "f1", payload)
 
         await ctx.send(
             f"🏁 F1 registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
         )
 
     except Exception as e:
-        await ctx.send(f"❌ Erro ao registrar F1: {e}")
+        print(f"❌ Falha ao registrar F1: {e}")
+        await ctx.send(
+            "⚠️ Não consegui confirmar o salvamento do F1. "
+            "Confira o dashboard antes de tentar registrar novamente."
+        )
 
 
 # ------------------------
@@ -231,12 +266,48 @@ async def rotina_svs():
 
 
 # ------------------------
+# KEEP-ALIVE DA API / BANCO
+# ------------------------
+@tasks.loop(minutes=4)
+async def manter_api_ativa():
+    if not API_URL:
+        print("⚠️ KEEP-ALIVE: API_URL não configurada.")
+        return
+
+    for tentativa in range(1, 4):
+        try:
+            response = await asyncio.to_thread(
+                requests.get,
+                f"{API_URL.rstrip('/')}/health",
+                timeout=(5, 15)
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("ok") is True and data.get("database") == "connected":
+                print("💚 KEEP-ALIVE: API e banco acessíveis.")
+                return
+
+            raise RuntimeError("Health check não confirmou conexão com o banco.")
+
+        except Exception as e:
+            print(f"⚠️ KEEP-ALIVE tentativa {tentativa}/3: {e}")
+            if tentativa < 3:
+                await asyncio.sleep(5 * tentativa)
+
+
+# ------------------------
 # READY
 # ------------------------
 @bot.event
 async def on_ready():
     print(f"🤖 Logado como {bot.user}")
-    rotina_svs.start()
+
+    if not rotina_svs.is_running():
+        rotina_svs.start()
+
+    if not manter_api_ativa.is_running():
+        manter_api_ativa.start()
 
 
 # ------------------------
