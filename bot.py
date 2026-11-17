@@ -5,7 +5,7 @@ from discord.ext import commands, tasks
 import requests
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 TOKEN = os.getenv("TOKEN")
@@ -19,6 +19,18 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# ------------------------
+# AVATAR (NOVO - MÍNIMO)
+# ------------------------
+def get_avatar_url(user):
+    try:
+        if user.avatar:
+            return user.avatar.url
+        return user.default_avatar.url
+    except:
+        return None
+
 
 # ------------------------
 # CONVERSÃO (K/M/G → número)
@@ -77,10 +89,22 @@ async def vs(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
+    avatar_url = get_avatar_url(ctx.author)
+
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
+
+    # 🔥 REGRA NOVA: após 23h conta como próximo dia
+    if agora.hour >= 23:
+        data = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        data = agora.strftime("%Y-%m-%d")
+
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": avatar_url,
+        "data": data  # ✅ NOVO
     }
 
     try:
@@ -95,7 +119,7 @@ async def vs(ctx, valor: str):
 
 
 # ------------------------
-# F1
+# F1 (AJUSTADO CORRETAMENTE)
 # ------------------------
 @bot.command()
 async def f1(ctx, valor: str):
@@ -105,10 +129,19 @@ async def f1(ctx, valor: str):
         await ctx.send("❌ Valor inválido! Ex: 2.5M, 1.2G, 500K")
         return
 
+    avatar_url = get_avatar_url(ctx.author)
+
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
+    data = agora.strftime("%Y-%m-%d")
+    semana = agora.isocalendar()[1]
+
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
-        "valor": numero
+        "valor": numero,
+        "avatar_url": avatar_url,
+        "data": data,          # ✅ NOVO
+        "semana": semana       # ✅ NOVO
     }
 
     try:
@@ -142,7 +175,7 @@ async def ranking(ctx):
 
         msg = "🏆 RANKING DO DIA (TOP 10)\n\n"
 
-        for i, user in enumerate(data[:10], start=1):
+        for i, user in enumerate(data, start=1):
 
             discord_id = user.get("discord_id")
 
@@ -169,19 +202,23 @@ async def ranking(ctx):
 
 
 # ------------------------
-# ROTINA SVS (DIÁRIA)
+# ROTINA SVS (DIÁRIA) - INTACTA
 # ------------------------
+from datetime import datetime
+from discord.ext import tasks
+
 @tasks.loop(minutes=1)
 async def rotina_svs():
-    agora = datetime.now(tz)
+    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
 
-    if agora.hour == 0 and agora.minute == 0:
+    if agora.hour == 23 and agora.minute == 0:
         canal = bot.get_channel(CANAL_INFORMATIVO)
 
         if not canal:
             return
 
-        dia = agora.weekday()
+        # AJUSTE AQUI: pega o próximo dia
+        dia = (agora.weekday() + 1) % 7
 
         mensagens = {
             0: """📅 Dia 1 – Expansão do Abrigo
@@ -212,10 +249,24 @@ async def rotina_svs():
 ⚙️ Aceleradores""",
 
             4: """📅 Dia 5 – Crescimento Holístico
-🧩 Fragmentos
-🔋 Núcleos
-📜 Medalhas
-💡 Use tudo acumulado""",
+🧩 Fragmentos de herói (azul, roxo e laranja)
+🔋 Núcleos de Energia
+📜 Medalhas (Sabedoria e Honra)
+🏗️ Melhorias de edifícios
+🔬 Pesquisa tecnológica
+🎖️ Treinamento e promoção de soldados
+📐 Plantas de design / Planta DX
+⚙️ Engrenagens e Ligas de Titânio
+🛡️ Equipamentos exclusivos / Equipamento vermelho D6
+🎯 Precisão para construção
+📦 Baús de chips laranja
+🍖 Rações Táticas Avançadas
+🧪 Poções Nutritivas
+💡 Chips de Potencial
+📘 Regulamentos de Treinamento (Comum e Avançado)
+
+🚀 Use tudo acumulado e maximize sua pontuação!
+""",
 
             5: """📅 Dia 6 – Destruidor de Inimigos
 🚚 Caminhões S
@@ -229,7 +280,6 @@ async def rotina_svs():
 
         await canal.send(f"@everyone\n\n{mensagens[dia]}")
 
-
 # ------------------------
 # READY
 # ------------------------
@@ -240,6 +290,18 @@ async def on_ready():
 
 
 # ------------------------
-# START
+# START (INTACTO)
 # ------------------------
-bot.run(TOKEN)
+import asyncio
+
+async def start_bot():
+    while True:
+        try:
+            print("🚀 Iniciando bot...")
+            await bot.start(TOKEN)
+        except Exception as e:
+            print(f"❌ Erro crítico: {e}")
+            print("⏳ Aguardando 60 segundos...")
+            await asyncio.sleep(60)
+
+asyncio.run(start_bot())
