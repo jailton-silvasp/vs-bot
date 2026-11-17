@@ -108,7 +108,8 @@ async def vs(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/vs", json=payload)
+        resposta = requests.post(f"{API_URL}/vs", json=payload, timeout=10)
+        resposta.raise_for_status()
 
         await ctx.send(
             f"🔥 VS registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
@@ -145,7 +146,8 @@ async def f1(ctx, valor: str):
     }
 
     try:
-        requests.post(f"{API_URL}/f1", json=payload)
+        resposta = requests.post(f"{API_URL}/f1", json=payload, timeout=10)
+        resposta.raise_for_status()
 
         await ctx.send(
             f"🏁 F1 registrado para 『{ctx.author.display_name}』: {formatar_valor(numero)}"
