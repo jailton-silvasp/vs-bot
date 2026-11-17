@@ -92,20 +92,11 @@ async def vs(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
-    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
-
-    # 🔥 REGRA NOVA: após 23h conta como próximo dia
-    if agora.hour >= 23:
-        data = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
-    else:
-        data = agora.strftime("%Y-%m-%d")
-
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": avatar_url,
-        "data": data  # ✅ NOVO
+        "avatar_url": avatar_url
     }
 
     try:
@@ -136,17 +127,11 @@ async def f1(ctx, valor: str):
 
     avatar_url = get_avatar_url(ctx.author)
 
-    agora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz)
-    data = agora.strftime("%Y-%m-%d")
-    semana = agora.isocalendar()[1]
-
     payload = {
         "usuario": ctx.author.display_name,
         "discord_id": str(ctx.author.id),
         "valor": numero,
-        "avatar_url": avatar_url,
-        "data": data,          # ✅ NOVO
-        "semana": semana       # ✅ NOVO
+        "avatar_url": avatar_url
     }
 
     try:
