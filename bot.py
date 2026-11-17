@@ -10,6 +10,7 @@ import pytz
 
 TOKEN = os.getenv("TOKEN")
 API_URL = os.getenv("API_URL")
+API_SECRET = os.getenv("API_SECRET")
 
 CANAL_INFORMATIVO = 1500181167583006720
 
@@ -108,7 +109,10 @@ async def vs(ctx, valor: str):
     }
 
     try:
-        resposta = requests.post(f"{API_URL}/vs", json=payload, timeout=10)
+        resposta = requests.post(
+            f"{API_URL}/vs", json=payload, timeout=10,
+            headers={"x-api-key": API_SECRET}
+        )
         resposta.raise_for_status()
 
         await ctx.send(
@@ -146,7 +150,10 @@ async def f1(ctx, valor: str):
     }
 
     try:
-        resposta = requests.post(f"{API_URL}/f1", json=payload, timeout=10)
+        resposta = requests.post(
+            f"{API_URL}/f1", json=payload, timeout=10,
+            headers={"x-api-key": API_SECRET}
+        )
         resposta.raise_for_status()
 
         await ctx.send(
