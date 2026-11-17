@@ -281,7 +281,8 @@ async def rotina_svs():
 @bot.event
 async def on_ready():
     print(f"🤖 Logado como {bot.user}")
-    rotina_svs.start()
+    if not rotina_svs.is_running():
+        rotina_svs.start()
 
 
 # ------------------------
